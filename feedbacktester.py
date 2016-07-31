@@ -6,11 +6,54 @@ import sys
 import time
 from collections import namedtuple
 
+def parse_args():
+	parser = argparse.ArgumentParser()
+	parser.add_argument('-i', '--inp', type = int, default = 10,
+                            help = 'Initial number of pools (10 default).')
+	parser.add_argument('-m', '--mnp', type = int, default = 100,
+                            help = 'Maximum number of pools (100 default).')
+	parser.add_argument('-n', '--nseconds', type = int, default = 1,
+                            help = 'Each n seconds new pool is added (default each 1 second).')
+	parser.add_argument('-s', '--seed', type = int, default = None,
+                            help = 'Random seed (default = None).')
+	parser.add_argument('-t', '--timeout', type = int, default = 3600,
+                            help = 'Timeout in seconds (300 default).')
+	parsed_args = parser.parse_args(sys.argv[1:])
+	return (parsed_args, parser)
+
+def make_config(pargs, parser):
+	pdict = pargs.__dict__
+	key_list = pdict.keys()
+	arg_list = [pdict[k] for k in key_list]
+	Config = namedtuple('Config', key_list)
+	nt_config = Config(*arg_list)
+	return nt_config
+
+def covered(pool):
+	for b in pool[0].currBranches():
+		if b in pool[4]:
+			pool[4][b] += 1
+		else:
+			pool[4][b] = 1
+
 def createNewPool():
-	return [SUT.sut(), 0.0, [[]], []]
+	return [SUT.sut(), 0.0, [[]], [], dict(), 0.0]
 
 def deletePools(pools, num):
 	newpools = []
+	for pool in pools:
+		if len(pool[4]) == 0:
+			newpools.append(pool)
+			if len(newpools) == num:
+				return newpools
+	for pool in pools:
+		if len(pool[4]) != 0:
+			pool[5] = getUniquness(pool, pools)
+	sortedpools = sorted(pools, key = lambda x : x[5])
+	while len(newpools) < num:
+		for pool in sortedpools:
+			if len(pool[4]) != 0:
+				newpools.append(pool)
 	return newpools
 
 def feedback(pool, keys):
@@ -42,6 +85,7 @@ def feedback(pool, keys):
 	if n == 1 and key in keys:
 		return
 	keys.add(key)
+	covered(pool)
 	pool[2].append(seq)
 	pool[1] += (time.time() - elapsed)
 
@@ -64,29 +108,6 @@ def getScore(pool):
 		return float('inf')
 	return len(pool[0].allBranches()) / pool[1]
 
-def make_config(pargs, parser):
-	pdict = pargs.__dict__
-	key_list = pdict.keys()
-	arg_list = [pdict[k] for k in key_list]
-	Config = namedtuple('Config', key_list)
-	nt_config = Config(*arg_list)
-	return nt_config
-
-def parse_args():
-	parser = argparse.ArgumentParser()
-	parser.add_argument('-i', '--inp', type = int, default = 10,
-                            help = 'Initial number of pools (10 default).')
-	parser.add_argument('-m', '--mnp', type = int, default = 100,
-                            help = 'Maximum number of pools (100 default).')
-	parser.add_argument('-n', '--nseconds', type = int, default = 1,
-                            help = 'Each n seconds new pool is added (default each 1 second).')
-	parser.add_argument('-s', '--seed', type = int, default = None,
-                            help = 'Random seed (default = None).')
-	parser.add_argument('-t', '--timeout', type = int, default = 3600,
-                            help = 'Timeout in seconds (300 default).')
-	parsed_args = parser.parse_args(sys.argv[1:])
-	return (parsed_args, parser)
-
 def selectPool(pools):
 	maxscore = -1.0
 	for pool in pools:
@@ -97,6 +118,19 @@ def selectPool(pools):
 			maxscore = score
 			selected = pool
 	return selected
+
+def getUniquness(pool, pools):
+	uniquness = 0.0
+	for c in pool[4]:
+		uniquness += getUniqunessHelper(pool, c)
+	return uniquness / len(pool[4])
+
+def getUniqunessHelper(pool, c, pools):
+	totalcovered = 0
+	for p in pools:
+		if c in p[4]:
+			totalcovered += p[4][c]
+	return pool[4][c] / totalcovered
 
 def main():
 	global config, R, start
