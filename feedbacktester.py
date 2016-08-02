@@ -121,7 +121,7 @@ def getKeyHelper(key, aorder):
 
 def getScore(pool):
 	global config
-	if pool[3] == 0.0 or len(pool[0].allBranches()) or len(pool[0].allStatements()) == 0:
+	if pool[3] == 0.0 or len(pool[0].allBranches()) == 0 or len(pool[0].allStatements()) == 0:
 		return float('inf')
 	if config.parameter:
 		return len(pool[0].allBranches()) / pool[3]
