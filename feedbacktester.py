@@ -14,6 +14,8 @@ def parse_args():
                             help = 'Maximum number of pools (100 default).')
 	parser.add_argument('-n', '--nseconds', type = int, default = 1,
                             help = 'Each n seconds new pool is added (default each 1 second).')
+	parser.add_argument('-p', '--parameter', type = int, default = 1,
+                            help = 'Parameter used for measuring uniquness of pool (default = 1). If 1, branch coverage is parameter. If 0, statement coverage is parameter).')
 	parser.add_argument('-s', '--seed', type = int, default = None,
                             help = 'Random seed (default = None).')
 	parser.add_argument('-t', '--timeout', type = int, default = 3600,
@@ -32,16 +34,24 @@ def make_config(pargs, parser):
 	return nt_config
 
 def covered(pool):
-	for b in pool[0].currBranches():
-		if b in pool[4]:
-			pool[4][b] += 1
+	global config
+	if config.parameter:
+		parameters = pool[0].currBranches()
+	else:
+		parameters = pool[0].currStatements()
+	for p in parameters:
+		if p in pool[4]:
+			pool[4][p] += 1
 		else:
-			pool[4][b] = 1
+			pool[4][p] = 1
 
 def createNewPool():
 	return [SUT.sut(), [[]], [], 0.0, dict(), 0.0]
 
 def deletePools(pools, num):
+	global config
+	if config.inp == 1:
+		return pools
 	newpools = []
 	for pool in pools:
 		if len(pool[4]) == 0:
@@ -65,7 +75,7 @@ def feedback(pool, keys):
 	seq = R.choice(pool[1])[:]
 	sut.replay(seq)
 	if time.time() - start > config.timeout:
-		return
+		return False
 	if R.randint(0, 9) == 0:
 		n = R.randint(2, 100)
 	else:
@@ -82,22 +92,23 @@ def feedback(pool, keys):
 			keys.add(key)
 			pool[2].append(seq)
 			pool[3] += (time.time() - elapsed)
-			fid = handle_failure(sut, fid)
-			if time.time() - start > config.timeout:
-				return
+			fid = handle_failure(sut, fid, start)
+			return True
+		if time.time() - start > config.timeout:
+			return False
 	if n == skipped:
-		return
+		return True
 	keys.add(key)
 	if config.inp != 1:
 		covered(pool)
 	pool[1].append(seq)
 	pool[3] += (time.time() - elapsed)
-	return
+	return True
 
 def getKey(seq, a, sut):
 	key = long()
 	for i in seq:
-		key = getKeyHelper(key, sut.actOrder(i))
+		key = getKeyHelper(key, sut.actOrder(i)) * 10
 	return getKeyHelper(key, sut.actOrder(a))
 
 def getKeyHelper(key, aorder):
@@ -109,9 +120,13 @@ def getKeyHelper(key, aorder):
 	return key
 
 def getScore(pool):
-	if pool[3] == 0.0 or len(pool[0].allBranches()) == 0:
+	global config
+	if pool[3] == 0.0 or len(pool[0].allBranches()) or len(pool[0].allStatements()) == 0:
 		return float('inf')
-	return len(pool[0].allBranches()) / pool[3]
+	if config.parameter:
+		return len(pool[0].allBranches()) / pool[3]
+	else:
+		return len(pool[0].allStatements()) / pool[3]
 
 def getUniquness(pool, pools):
 	uniquness = 0.0
@@ -126,7 +141,8 @@ def getUniqunessHelper(pool, c, pools):
 			totalcovered += p[4][c]
 	return pool[4][c] / totalcovered
 
-def handle_failure(sut, fid):
+def handle_failure(sut, fid, start):
+	print "FIND BUG in ", time.time() - start, "seconds!!"
 	filename = 'failure' + `fid` + '.test'
 	sut.saveTest(sut.test(), filename)
 	return fid + 1
@@ -140,6 +156,9 @@ def internal(pools):
 		i += 1
 
 def selectPool(pools):
+	global config
+	if config.inp == 1:
+		return pools[0]
 	maxscore = -1.0
 	for pool in pools:
 		score = getScore(pool)
@@ -164,20 +183,13 @@ def main():
 		pools.append(createNewPool())
 	lastadded = time.time()
 	while time.time() - start < config.timeout:
-		if config.inp != 1 and time.time() - lastadded > config.nseconds:
+		if time.time() - lastadded > config.nseconds:
 			pools.append(createNewPool())
 			lastadded = time.time()
-		if config.inp != 1:
-			pool = selectPool(pools)
-		else:
-			pool = pools[0]
-		feedback(pool, keys)
-		if time.time() - start > config.timeout:
+		if not feedback(selectPool(pools), keys):
 			break
-		if config.inp != 1 and len(pools) > config.mnp:
+		if len(pools) > config.mnp:
 			pools = deletePools(pools, config.mnp / 2)
-		if time.time() - start > config.timeout:
-			break
 	if config.internal:
 		internal(pools)
 
