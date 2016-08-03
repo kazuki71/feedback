@@ -33,6 +33,19 @@ def make_config(pargs, parser):
 	nt_config = Config(*arg_list)
 	return nt_config
 
+def check_redundancy(seq, a, keys, sut):
+	if not len(seq):
+		return False
+	index = 0
+	for i in seq:
+		if not check_redundancy_helper(sut.actOrder(i), keys, index, len(seq) + 1):
+			return False
+		index += 1
+	return check_redundancy_helper(sut.actOrder(a), keys, index, len(seq) + 1)
+
+def check_redundancy_helper(aorder, keys, index, length):
+	return aorder in keys.keys() and (index, length) in keys[aorder]
+
 def covered(pool):
 	global config
 	if config.parameter:
@@ -45,10 +58,10 @@ def covered(pool):
 		else:
 			pool[4][p] = 1
 
-def createNewPool():
+def create_new_pool():
 	return [SUT.sut(), [[]], [], 0.0, dict(), 0.0]
 
-def deletePools(pools, num):
+def delete_pools(pools, num):
 	global config
 	if config.inp == 1:
 		return pools
@@ -60,7 +73,7 @@ def deletePools(pools, num):
 				return newpools
 	for pool in pools:
 		if len(pool[4]) != 0:
-			pool[5] = getUniquness(pool, pools)
+			pool[5] = get_uniquness(pool, pools)
 	sortedpools = sorted(pools, key = lambda x : x[5], reverse = True)
 	while len(newpools) < num:
 		for pool in sortedpools:
@@ -83,43 +96,29 @@ def feedback(pool, keys):
 	skipped = 0
 	for i in xrange(n):
 		a = sut.randomEnabled(R)
-		key = getKey(seq, a, sut)
-		if key in keys:
+		if check_redundancy(seq, a, keys, sut):
 			skipped += 1
+			if n == skipped:
+				return True
 			continue
 		seq.append(a)
 		if not sut.safely(a):
-			keys.add(key)
+			print "FIND BUG in ", time.time() - start, "SECONDS"
+			updaate_keys(seq, keys, sut)
 			pool[2].append(seq)
 			pool[3] += (time.time() - elapsed)
 			fid = handle_failure(sut, fid, start)
 			return True
 		if time.time() - start > config.timeout:
 			return False
-	if n == skipped:
-		return True
-	keys.add(key)
+	updaate_keys(seq, keys, sut)
 	if config.inp != 1:
 		covered(pool)
 	pool[1].append(seq)
 	pool[3] += (time.time() - elapsed)
 	return True
 
-def getKey(seq, a, sut):
-	key = long()
-	for i in seq:
-		key = getKeyHelper(key, sut.actOrder(i)) * 10
-	return getKeyHelper(key, sut.actOrder(a))
-
-def getKeyHelper(key, aorder):
-	ndigits = int(math.log10(aorder)) + 1
-	for i in xrange(ndigits):
-		msb = aorder / int(math.pow(10, ndigits - i - 1))
-		key = key * 10 + msb
-		aorder %= int(math.pow(10, ndigits - i - 1))
-	return key
-
-def getScore(pool):
+def get_score(pool):
 	global config
 	if pool[3] == 0.0 or len(pool[0].allBranches()) == 0 or len(pool[0].allStatements()) == 0:
 		return float('inf')
@@ -128,13 +127,13 @@ def getScore(pool):
 	else:
 		return len(pool[0].allStatements()) / pool[3]
 
-def getUniquness(pool, pools):
+def get_uniquness(pool, pools):
 	uniquness = 0.0
 	for c in pool[4]:
-		uniquness += getUniqunessHelper(pool, c, pools)
+		uniquness += get_uniquness_helper(pool, c, pools)
 	return uniquness / len(pool[4])
 
-def getUniqunessHelper(pool, c, pools):
+def get_uniquness_helper(pool, c, pools):
 	totalcovered = 0.0
 	for p in pools:
 		if c in p[4]:
@@ -142,7 +141,6 @@ def getUniqunessHelper(pool, c, pools):
 	return pool[4][c] / totalcovered
 
 def handle_failure(sut, fid, start):
-	print "FIND BUG in ", time.time() - start, "seconds!!"
 	filename = 'failure' + `fid` + '.test'
 	sut.saveTest(sut.test(), filename)
 	return fid + 1
@@ -155,19 +153,31 @@ def internal(pools):
 		print ""
 		i += 1
 
-def selectPool(pools):
+def select_pool(pools):
 	global config
 	if config.inp == 1:
 		return pools[0]
 	maxscore = -1.0
 	for pool in pools:
-		score = getScore(pool)
+		score = get_score(pool)
 		if score == float('inf'):
 			return pool
 		if score > maxscore:
 			maxscore = score
 			selected = pool
 	return selected
+
+def updaate_keys(seq, keys, sut):
+	index = 0
+	for i in seq:
+		if sut.actOrder(i) in keys.keys():
+			if (index, len(seq)) in keys[sut.actOrder(i)]:
+				continue
+			else:
+				keys[sut.actOrder(i)].add((index, len(seq)))
+		else:
+			keys[sut.actOrder(i)] = set((index, len(seq)))
+		index += 1
 
 def main():
 	global config, fid, R, start
@@ -178,18 +188,18 @@ def main():
 	fid = 0
 	start = time.time()
 	pools = []
-	keys = set()
+	keys = dict()
 	for i in xrange(config.inp):
-		pools.append(createNewPool())
+		pools.append(create_new_pool())
 	lastadded = time.time()
 	while time.time() - start < config.timeout:
 		if time.time() - lastadded > config.nseconds:
-			pools.append(createNewPool())
+			pools.append(create_new_pool())
 			lastadded = time.time()
-		if not feedback(selectPool(pools), keys):
+		if not feedback(select_pool(pools), keys):
 			break
 		if len(pools) > config.mnp:
-			pools = deletePools(pools, config.mnp / 2)
+			pools = delete_pools(pools, config.mnp / 2)
 	if config.internal:
 		internal(pools)
 
