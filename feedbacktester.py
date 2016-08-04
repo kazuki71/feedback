@@ -8,18 +8,20 @@ from collections import namedtuple
 
 def parse_args():
 	parser = argparse.ArgumentParser()
+	parser.add_argument('-c', '--coverages', type = int, default = 1,
+                            help = 'Which coverages used for measuring uniquness of pool. If 1, branch coverages. If 0, statement coverages. (default = 1).')
 	parser.add_argument('-i', '--inp', type = int, default = 10,
                             help = 'Initial number of pools (10 default).')
 	parser.add_argument('-m', '--mnp', type = int, default = 100,
                             help = 'Maximum number of pools (100 default).')
 	parser.add_argument('-n', '--nseconds', type = int, default = 1,
                             help = 'Each n seconds new pool is added (default each 1 second).')
-	parser.add_argument('-p', '--parameter', type = int, default = 1,
-                            help = 'Parameter used for measuring uniquness of pool (default = 1). If 1, branch coverage is parameter. If 0, statement coverage is parameter).')
 	parser.add_argument('-s', '--seed', type = int, default = None,
                             help = 'Random seed (default = None).')
 	parser.add_argument('-t', '--timeout', type = int, default = 3600,
                             help = 'Timeout in seconds (300 default).')
+	parser.add_argument('-C', '--count', type = bool, default = True,
+                            help = 'Whether count number of coverages or not for measuring uniquness of pool (default = True).')
         parser.add_argument('-I', '--internal', type = bool, default = False,
                             help = 'Produce internal coverage report at the end (default = False).')
 	parsed_args = parser.parse_args(sys.argv[1:])
@@ -48,15 +50,19 @@ def check_redundancy_helper(aorder, keys, index, length):
 
 def covered(pool):
 	global config
-	if config.parameter:
-		parameters = pool[0].currBranches()
+	if config.coverages:
+		coverages = pool[0].currBranches()
 	else:
-		parameters = pool[0].currStatements()
-	for p in parameters:
-		if p in pool[4]:
-			pool[4][p] += 1
+		coverages = pool[0].currStatements()
+	for c in coverages:
+		if config.count:
+			if c in pool[4]:
+				pool[4][c] += 1
+			else:
+				pool[4][c] = 1
 		else:
-			pool[4][p] = 1
+			if not c in pool[4]:
+				pool[4][c] = 1
 
 def create_new_pool():
 	return [SUT.sut(), [[]], [], 0.0, dict(), 0.0]
@@ -67,18 +73,12 @@ def delete_pools(pools, num):
 		return pools
 	newpools = []
 	for pool in pools:
-		if len(pool[4]) == 0:
-			newpools.append(pool)
-			if len(newpools) == num:
-				return newpools
-	for pool in pools:
-		if len(pool[4]) != 0:
-			pool[5] = get_uniquness(pool, pools)
+		pool[5] = get_uniquness(pool, pools)
 	sortedpools = sorted(pools, key = lambda x : x[5], reverse = True)
-	while len(newpools) < num:
-		for pool in sortedpools:
-			if len(pool[4]) != 0:
-				newpools.append(pool)
+	for pool in sortedpools:
+		newpools.append(pool)
+		if len(newpools) == num:
+			break
 	return newpools
 
 def feedback(pool, keys):
@@ -122,12 +122,14 @@ def get_score(pool):
 	global config
 	if pool[3] == 0.0 or len(pool[0].allBranches()) == 0 or len(pool[0].allStatements()) == 0:
 		return float('inf')
-	if config.parameter:
+	if config.coverages:
 		return len(pool[0].allBranches()) / pool[3]
 	else:
 		return len(pool[0].allStatements()) / pool[3]
 
 def get_uniquness(pool, pools):
+	if len(pool[4]) == 0:
+		return float('inf')
 	uniquness = 0.0
 	for c in pool[4]:
 		uniquness += get_uniquness_helper(pool, c, pools)
