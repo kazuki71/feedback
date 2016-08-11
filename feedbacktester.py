@@ -73,7 +73,7 @@ def delete_pools(pools, num):
 	newpools = []
 	for pool in pools:
 		pool[5] = uniquness(pool, pools)
-	sortedpools = sorted(pools, key = lambda x : x[5], reverse = True)
+	sortedpools = sorted(pools, key = lambda x: x[5], reverse = True)
 	for pool in sortedpools:
 		newpools.append(pool)
 		if len(newpools) == num:
@@ -88,10 +88,8 @@ def feedback(pool, keys):
 	sut.replay(seq)
 	if time.time() - start > config.timeout:
 		return False
-	if R.randint(0, 9) == 0:
-		n = R.randint(2, 100)
-	else:
-		n = 1
+	n = (lambda x: 1 if x != 0 else R.randint(2, 100))(R.randint(0, 9))
+	print n
 	skipped = 0
 	for i in xrange(n):
 		a = sut.randomEnabled(R)
@@ -103,14 +101,14 @@ def feedback(pool, keys):
 		seq.append(a)
 		if not sut.safely(a):
 			print "FIND BUG in ", time.time() - start, "SECONDS"
-			updaate_keys(seq, keys, sut)
+			update_keys(seq, keys, sut)
 			pool[2].append(seq)
 			pool[3] += (time.time() - elapsed)
 			fid = handle_failure(sut, fid, start)
 			return True
 		if time.time() - start > config.timeout:
 			return False
-	updaate_keys(seq, keys, sut)
+	update_keys(seq, keys, sut)
 	if not config.directed:
 		covered(pool)
 	pool[1].append(seq)
@@ -168,7 +166,7 @@ def uniquness_helper(pool, c, pools):
 			totalcovered += p[4][c]
 	return pool[4][c] / totalcovered
 
-def updaate_keys(seq, keys, sut):
+def update_keys(seq, keys, sut):
 	index = 0
 	for i in seq:
 		if sut.actOrder(i) in keys.keys():
