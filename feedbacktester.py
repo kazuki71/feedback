@@ -10,8 +10,6 @@ def parse_args():
 	parser = argparse.ArgumentParser()
 	parser.add_argument('-c', '--coverages', type = int, default = 1,
                             help = 'Which coverages used for measuring uniquness of pool. If 1, branch coverages. If 0, statement coverages. (default = 1).')
-	parser.add_argument('-d', '--directed', type = bool, default = False,
-                            help = 'Whether run as feedback-directed random testing or not (default = False).')
 	parser.add_argument('-i', '--inp', type = int, default = 10,
                             help = 'Initial number of pools (10 default).')
 	parser.add_argument('-m', '--mnp', type = int, default = 100,
@@ -24,8 +22,10 @@ def parse_args():
                             help = 'Timeout in seconds (300 default).')
 	parser.add_argument('-C', '--count', type = bool, default = True,
                             help = 'Whether count number of coverages or not for measuring uniquness of pool (default = True).')
-        parser.add_argument('-I', '--internal', type = bool, default = False,
-                            help = 'Produce internal coverage report at the end (default = False).')
+        parser.add_argument('-I', '--internal', action = 'store_true',
+                            help = 'Produce internal coverage report at the end.')
+	parser.add_argument('-S', '--single', action = 'store_true',
+                            help = 'Using only single pool instead of multi pools.')
 	parsed_args = parser.parse_args(sys.argv[1:])
 	return (parsed_args, parser)
 
@@ -36,6 +36,15 @@ def make_config(pargs, parser):
 	Config = namedtuple('Config', key_list)
 	nt_config = Config(*arg_list)
 	return nt_config
+
+def all_coverages(pools, which):
+	s = set()
+	for pool in pools:
+		coverages = (lambda x: pool[0].allBranches() if x == 1 else pool[0].allStatements())(which)
+		for c in coverages:
+			if not c in s:
+				s.add(c)
+	return s
 
 def check_redundancy(seq, a, keys, sut):
 	if not len(seq):
@@ -52,10 +61,7 @@ def check_redundancy_helper(aorder, keys, index, length):
 
 def covered(pool):
 	global config
-	if config.coverages:
-		coverages = pool[0].currBranches()
-	else:
-		coverages = pool[0].currStatements()
+	coverages = (lambda x: pool[0].currBranches() if x == 1 else pool[0].currStatements())(config.coverages)
 	for c in coverages:
 		if config.count:
 			if c in pool[4]:
@@ -81,7 +87,7 @@ def delete_pools(pools, num):
 	return newpools
 
 def feedback(pool, keys):
-	global config, fid, R, start
+	global config, fid, R, start, ntests, nskips
 	elapsed = time.time()
 	sut = pool[0]
 	seq = R.choice(pool[1])[:]
@@ -89,13 +95,13 @@ def feedback(pool, keys):
 	if time.time() - start > config.timeout:
 		return False
 	n = (lambda x: 1 if x != 0 else R.randint(2, 100))(R.randint(0, 9))
-	print n
-	skipped = 0
+	skip = 0
 	for i in xrange(n):
 		a = sut.randomEnabled(R)
 		if check_redundancy(seq, a, keys, sut):
-			skipped += 1
-			if n == skipped:
+			skip += 1
+			if n == skip:
+				nskips += 1
 				return True
 			continue
 		seq.append(a)
@@ -108,8 +114,9 @@ def feedback(pool, keys):
 			return True
 		if time.time() - start > config.timeout:
 			return False
+	ntests += 1
 	update_keys(seq, keys, sut)
-	if not config.directed:
+	if not config.single:
 		covered(pool)
 	pool[1].append(seq)
 	pool[3] += (time.time() - elapsed)
@@ -139,7 +146,7 @@ def score(pool):
 
 def select_pool(pools):
 	global config
-	if config.directed:
+	if config.single:
 		return pools[0]
 	maxscore = -1.0
 	for pool in pools:
@@ -179,30 +186,36 @@ def update_keys(seq, keys, sut):
 		index += 1
 
 def main():
-	global config, fid, R, start
+	global config, fid, R, start, ntests, nskips
 	parsed_args, parser = parse_args()
 	config = make_config(parsed_args, parser)
 	print('Feedback-controlled random testing using config={}'.format(config))
 	R = random.Random(config.seed)
 	fid = 0
 	ntests = 0
+	nskips = 0
 	start = time.time()
 	pools = []
 	keys = dict()
-	for i in xrange(config.inp):
+	n = (lambda x: 1 if x else config.inp)(config.single)
+	for i in xrange(n):
 		pools.append(create_new_pool())
 	lastadded = time.time()
 	while time.time() - start < config.timeout:
-		ntests += 1
-		if not config.directed and time.time() - lastadded > config.nseconds:
+		if not config.single and time.time() - lastadded > config.nseconds:
 			pools.append(create_new_pool())
 			lastadded = time.time()
 		if not feedback(select_pool(pools), keys):
 			break
-		if not config.directed and len(pools) > config.mnp:
+		if not config.single and len(pools) > config.mnp:
 			pools = delete_pools(pools, config.mnp / 2)
 	if config.internal:
 		internal(pools)
-	print "ntests", ntests
+	print time.time() - start, "TOTAL RUNTIME"
+	print ntests, "EXECUTED"
+	print nskips, "SKIPPED"
+	print len(all_coverages(pools, 1)), "BRANCHES COVERED"
+	print len(all_coverages(pools, 0)), "STATEMENTS COVERED"
+
 if __name__ == '__main__':
 	main()
