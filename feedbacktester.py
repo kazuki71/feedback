@@ -10,6 +10,8 @@ def parse_args():
 	parser = argparse.ArgumentParser()
 	parser.add_argument('-c', '--coverages', type = int, default = 1,
                             help = 'Which coverages used for measuring uniquness of pool. If 1, branch coverages. If 0, statement coverages. (default = 1).')
+	parser.add_argument('-d', '--directed', type = bool, default = False,
+                            help = 'Whether run as feedback-directed random testing or not (default = False).')
 	parser.add_argument('-i', '--inp', type = int, default = 10,
                             help = 'Initial number of pools (10 default).')
 	parser.add_argument('-m', '--mnp', type = int, default = 100,
@@ -68,12 +70,9 @@ def create_new_pool():
 	return [SUT.sut(), [[]], [], 0.0, dict(), 0.0]
 
 def delete_pools(pools, num):
-	global config
-	if config.inp == 1:
-		return pools
 	newpools = []
 	for pool in pools:
-		pool[5] = get_uniquness(pool, pools)
+		pool[5] = uniquness(pool, pools)
 	sortedpools = sorted(pools, key = lambda x : x[5], reverse = True)
 	for pool in sortedpools:
 		newpools.append(pool)
@@ -112,35 +111,11 @@ def feedback(pool, keys):
 		if time.time() - start > config.timeout:
 			return False
 	updaate_keys(seq, keys, sut)
-	if config.inp != 1:
+	if not config.directed:
 		covered(pool)
 	pool[1].append(seq)
 	pool[3] += (time.time() - elapsed)
 	return True
-
-def get_score(pool):
-	global config
-	if pool[3] == 0.0 or len(pool[0].allBranches()) == 0 or len(pool[0].allStatements()) == 0:
-		return float('inf')
-	if config.coverages:
-		return len(pool[0].allBranches()) / pool[3]
-	else:
-		return len(pool[0].allStatements()) / pool[3]
-
-def get_uniquness(pool, pools):
-	if len(pool[4]) == 0:
-		return float('inf')
-	uniquness = 0.0
-	for c in pool[4]:
-		uniquness += get_uniquness_helper(pool, c, pools)
-	return uniquness / len(pool[4])
-
-def get_uniquness_helper(pool, c, pools):
-	totalcovered = 0.0
-	for p in pools:
-		if c in p[4]:
-			totalcovered += p[4][c]
-	return pool[4][c] / totalcovered
 
 def handle_failure(sut, fid, start):
 	filename = 'failure' + `fid` + '.test'
@@ -155,19 +130,43 @@ def internal(pools):
 		print ""
 		i += 1
 
+def score(pool):
+	global config
+	if pool[3] == 0.0 or len(pool[0].allBranches()) == 0 or len(pool[0].allStatements()) == 0:
+		return float('inf')
+	if config.coverages:
+		return len(pool[0].allBranches()) / pool[3]
+	else:
+		return len(pool[0].allStatements()) / pool[3]
+
 def select_pool(pools):
 	global config
-	if config.inp == 1:
+	if config.directed:
 		return pools[0]
 	maxscore = -1.0
 	for pool in pools:
-		score = get_score(pool)
-		if score == float('inf'):
+		s = score(pool)
+		if s == float('inf'):
 			return pool
-		if score > maxscore:
-			maxscore = score
+		if s > maxscore:
+			maxscore = s
 			selected = pool
 	return selected
+
+def uniquness(pool, pools):
+	if len(pool[4]) == 0:
+		return float('inf')
+	uniquness = 0.0
+	for c in pool[4]:
+		uniquness += uniquness_helper(pool, c, pools)
+	return uniquness / len(pool[4])
+
+def uniquness_helper(pool, c, pools):
+	totalcovered = 0.0
+	for p in pools:
+		if c in p[4]:
+			totalcovered += p[4][c]
+	return pool[4][c] / totalcovered
 
 def updaate_keys(seq, keys, sut):
 	index = 0
@@ -188,6 +187,7 @@ def main():
 	print('Feedback-controlled random testing using config={}'.format(config))
 	R = random.Random(config.seed)
 	fid = 0
+	ntests = 0
 	start = time.time()
 	pools = []
 	keys = dict()
@@ -195,15 +195,16 @@ def main():
 		pools.append(create_new_pool())
 	lastadded = time.time()
 	while time.time() - start < config.timeout:
-		if time.time() - lastadded > config.nseconds:
+		ntests += 1
+		if not config.directed and time.time() - lastadded > config.nseconds:
 			pools.append(create_new_pool())
 			lastadded = time.time()
 		if not feedback(select_pool(pools), keys):
 			break
-		if len(pools) > config.mnp:
+		if not config.directed and len(pools) > config.mnp:
 			pools = delete_pools(pools, config.mnp / 2)
 	if config.internal:
 		internal(pools)
-
+	print "ntests", ntests
 if __name__ == '__main__':
 	main()
