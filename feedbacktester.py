@@ -56,7 +56,7 @@ def check_redundancy_helper(aorder, keys, index, length):
 
 def covered(pool):
 	global config
-	coverages = (lambda x: pool[0].currBranches() if x == 1 else pool[0].currStatements())(config.coverages)
+	coverages = pool[0].currBranches() if config.coverages == 1 else pool[0].currStatements()
 	for c in coverages:
 		if config.count:
 			if c in pool[4]:
@@ -89,7 +89,7 @@ def feedback(pool, keys, branches, statements):
 	sut.replay(seq)
 	if time.time() - start > config.timeout:
 		return False
-	n = (lambda x: 1 if x != 0 else R.randint(2, 100))(R.randint(0, 9))
+	n = R.randint(2, 100) if R.randint(0, 9) == 0 else 1
 	skip = 0
 	for i in xrange(n):
 		a = sut.randomEnabled(R)
@@ -209,7 +209,7 @@ def main():
 	keys = dict()
 	branches = set()
 	statements = set()
-	n = (lambda x: 1 if x else config.inp)(config.single)
+	n = 1 if config.single else config.inp
 	for i in xrange(n):
 		pools.append(create_new_pool())
 	lastadded = time.time()
