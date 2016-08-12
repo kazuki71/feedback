@@ -16,6 +16,8 @@ def parse_args():
                             help = 'Maximum number of pools (100 default).')
 	parser.add_argument('-n', '--nseconds', type = int, default = 1,
                             help = 'Each n seconds new pool is added (default each 1 second).')
+	parser.add_argument('-r', '--running', action = 'store_true',
+                            help = 'Produce running branch coverage report.')
 	parser.add_argument('-s', '--seed', type = int, default = None,
                             help = 'Random seed (default = None).')
 	parser.add_argument('-t', '--timeout', type = int, default = 3600,
@@ -36,15 +38,6 @@ def make_config(pargs, parser):
 	Config = namedtuple('Config', key_list)
 	nt_config = Config(*arg_list)
 	return nt_config
-
-def all_coverages(pools, which):
-	s = set()
-	for pool in pools:
-		coverages = (lambda x: pool[0].allBranches() if x == 1 else pool[0].allStatements())(which)
-		for c in coverages:
-			if not c in s:
-				s.add(c)
-	return s
 
 def check_redundancy(seq, a, keys, sut):
 	if not len(seq):
@@ -86,7 +79,7 @@ def delete_pools(pools, num):
 			break
 	return newpools
 
-def feedback(pool, keys):
+def feedback(pool, keys, branches, statements):
 	global config, fid, R, start, ntests, nskips
 	elapsed = time.time()
 	sut = pool[0]
@@ -105,7 +98,9 @@ def feedback(pool, keys):
 				return True
 			continue
 		seq.append(a)
-		if not sut.safely(a):
+		ok = sut.safely(a)
+		update_coverages(a, branches, statements, sut)
+		if not ok:
 			print "FIND BUG in ", time.time() - start, "SECONDS"
 			update_keys(seq, keys, sut)
 			pool[2].append(seq)
@@ -173,6 +168,20 @@ def uniquness_helper(pool, c, pools):
 			totalcovered += p[4][c]
 	return pool[4][c] / totalcovered
 
+def update_coverages(a, branches, statements, sut):
+	global config, start
+	if sut.newBranches() != set([]):
+		if config.running:
+			print "ACTION:", a[0]
+		for b in sut.newBranches():
+			branches.add(b)
+			if config.running:
+				print time.time() - start, len(branches), "New branch", b
+
+	if sut.newStatements() != set([]):
+		for s in sut.newStatements():
+			statements.add(s)
+
 def update_keys(seq, keys, sut):
 	index = 0
 	for i in seq:
@@ -197,6 +206,8 @@ def main():
 	start = time.time()
 	pools = []
 	keys = dict()
+	branches = set()
+	statements = set()
 	n = (lambda x: 1 if x else config.inp)(config.single)
 	for i in xrange(n):
 		pools.append(create_new_pool())
@@ -205,7 +216,7 @@ def main():
 		if not config.single and time.time() - lastadded > config.nseconds:
 			pools.append(create_new_pool())
 			lastadded = time.time()
-		if not feedback(select_pool(pools), keys):
+		if not feedback(select_pool(pools), keys, branches, statements):
 			break
 		if not config.single and len(pools) > config.mnp:
 			pools = delete_pools(pools, config.mnp / 2)
@@ -214,8 +225,8 @@ def main():
 	print time.time() - start, "TOTAL RUNTIME"
 	print ntests, "EXECUTED"
 	print nskips, "SKIPPED"
-	print len(all_coverages(pools, 1)), "BRANCHES COVERED"
-	print len(all_coverages(pools, 0)), "STATEMENTS COVERED"
+	print len(branches), "BRANCHES COVERED"
+	print len(statements), "STATEMENTS COVERED"
 
 if __name__ == '__main__':
 	main()
