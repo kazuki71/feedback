@@ -16,6 +16,8 @@ def parse_args():
                             help = 'Maximum number of pools (100 default).')
 	parser.add_argument('-n', '--nseconds', type = int, default = 1,
                             help = 'Each n seconds new pool is added (default each 1 second).')
+	parser.add_argument('-q', '--quickTests', action = 'store_true',
+                            help = 'Produce quick tests for coverage.')
 	parser.add_argument('-r', '--running', action = 'store_true',
                             help = 'Produce running branch coverage report.')
 	parser.add_argument('-s', '--seed', type = int, default = None,
@@ -177,7 +179,6 @@ def update_coverages(a, branches, statements, sut):
 			branches.add(b)
 			if config.running:
 				print time.time() - start, len(branches), "New branch", b
-
 	if sut.newStatements() != set([]):
 		for s in sut.newStatements():
 			statements.add(s)
