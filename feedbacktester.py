@@ -23,7 +23,7 @@ def parse_args():
 	parser.add_argument('-s', '--seed', type = int, default = None,
                             help = 'Random seed (default = None).')
 	parser.add_argument('-t', '--timeout', type = int, default = 3600,
-                            help = 'Timeout in seconds (300 default).')
+                            help = 'Timeout in seconds (3600 default).')
 	parser.add_argument('-C', '--count', type = bool, default = True,
                             help = 'Whether count number of coverages or not for measuring uniquness of pool (default = True).')
         parser.add_argument('-I', '--internal', action = 'store_true',
@@ -41,17 +41,17 @@ def make_config(pargs, parser):
 	nt_config = Config(*arg_list)
 	return nt_config
 
-def check_redundancy(seq, a, keys, sut):
+def redundant(seq, a, keys, sut):
 	if not len(seq):
 		return False
 	index = 0
 	for i in seq:
-		if not check_redundancy_helper(sut.actOrder(i), keys, index, len(seq) + 1):
+		if not _redundant_helper(sut.actOrder(i), keys, index, len(seq) + 1):
 			return False
 		index += 1
-	return check_redundancy_helper(sut.actOrder(a), keys, index, len(seq) + 1)
+	return _redundant_helper(sut.actOrder(a), keys, index, len(seq) + 1)
 
-def check_redundancy_helper(aorder, keys, index, length):
+def _redundant_helper(aorder, keys, index, length):
 	return aorder in keys.keys() and (index, length) in keys[aorder]
 
 def covered(pool):
@@ -82,7 +82,7 @@ def delete_pools(pools, num):
 	return newpools
 
 def feedback(pool, keys, branches, statements):
-	global config, fid, R, start, ntests, nskips
+	global config, fid, R, start, sequences, redundancies
 	elapsed = time.time()
 	sut = pool[0]
 	seq = R.choice(pool[1])[:]
@@ -93,10 +93,10 @@ def feedback(pool, keys, branches, statements):
 	skip = 0
 	for i in xrange(n):
 		a = sut.randomEnabled(R)
-		if check_redundancy(seq, a, keys, sut):
+		if redundant(seq, a, keys, sut):
 			skip += 1
 			if n == skip:
-				nskips += 1
+				redundancies += 1
 				return True
 			continue
 		seq.append(a)
@@ -111,7 +111,7 @@ def feedback(pool, keys, branches, statements):
 			return True
 		if time.time() - start > config.timeout:
 			return False
-	ntests += 1
+	sequences += 1
 	update_keys(seq, keys, sut)
 	if not config.single:
 		covered(pool)
@@ -160,10 +160,10 @@ def uniquness(pool, pools):
 		return float('inf')
 	uniquness = 0.0
 	for c in pool[4]:
-		uniquness += uniquness_helper(pool, c, pools)
+		uniquness += _uniquness_helper(pool, c, pools)
 	return uniquness / len(pool[4])
 
-def uniquness_helper(pool, c, pools):
+def _uniquness_helper(pool, c, pools):
 	totalcovered = 0.0
 	for p in pools:
 		if c in p[4]:
@@ -172,16 +172,20 @@ def uniquness_helper(pool, c, pools):
 
 def update_coverages(a, branches, statements, sut):
 	global config, start
+	flag = True
 	if sut.newBranches() != set([]):
-		if config.running:
-			print "ACTION:", a[0]
 		for b in sut.newBranches():
-			branches.add(b)
-			if config.running:
-				print time.time() - start, len(branches), "New branch", b
+			if not b in branches:
+				branches.add(b)
+				if config.running:
+					if flag:
+						print "ACTION:", sut.prettyName(a[0])
+						flag = False
+					print time.time() - start, len(branches), "New branch", b
 	if sut.newStatements() != set([]):
 		for s in sut.newStatements():
-			statements.add(s)
+			if not s in statements:
+				statements.add(s)
 
 def update_keys(seq, keys, sut):
 	index = 0
@@ -196,14 +200,14 @@ def update_keys(seq, keys, sut):
 		index += 1
 
 def main():
-	global config, fid, R, start, ntests, nskips
+	global config, fid, R, start, sequences, redundancies
 	parsed_args, parser = parse_args()
 	config = make_config(parsed_args, parser)
 	print('Feedback-controlled random testing using config={}'.format(config))
 	R = random.Random(config.seed)
 	fid = 0
-	ntests = 0
-	nskips = 0
+	sequences = 0
+	redundancies = 0
 	start = time.time()
 	pools = []
 	keys = dict()
@@ -224,8 +228,8 @@ def main():
 	if config.internal:
 		internal(pools)
 	print time.time() - start, "TOTAL RUNTIME"
-	print ntests, "EXECUTED"
-	print nskips, "SKIPPED"
+	print sequences, "SEQUENCES"
+	print redundancies, "REDUNDANCIES"
 	print len(branches), "BRANCHES COVERED"
 	print len(statements), "STATEMENTS COVERED"
 
