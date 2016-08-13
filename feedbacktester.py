@@ -83,7 +83,6 @@ def feedback(pool, keys, branches, statements):
 		if redundant(seq, a, keys, sut):
 			skip += 1
 			if n == skip:
-				print "REDUNDANCY", "len(seq)", len(seq) + n
 				redundancies += 1
 				return True
 			continue
@@ -99,7 +98,6 @@ def feedback(pool, keys, branches, statements):
 			return True
 		if time.time() - start > config.timeout:
 			return False
-	print "NEW SEQUENCE"
 	sequences += 1
 	update_keys(seq, keys, sut)
 	if not config.single:
