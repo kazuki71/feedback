@@ -41,19 +41,6 @@ def make_config(pargs, parser):
 	nt_config = Config(*arg_list)
 	return nt_config
 
-def redundant(seq, a, keys, sut):
-	if not len(seq):
-		return False
-	index = 0
-	for i in seq:
-		if not _redundant_helper(sut.actOrder(i), keys, index, len(seq) + 1):
-			return False
-		index += 1
-	return _redundant_helper(sut.actOrder(a), keys, index, len(seq) + 1)
-
-def _redundant_helper(aorder, keys, index, length):
-	return aorder in keys.keys() and (index, length) in keys[aorder]
-
 def covered(pool):
 	global config
 	coverages = pool[0].currBranches() if config.coverages == 1 else pool[0].currStatements()
@@ -132,6 +119,19 @@ def internal(pools):
 		print ""
 		i += 1
 
+def redundant(seq, a, keys, sut):
+	if not len(seq):
+		return False
+	index = -1
+	for i in seq:
+		index += 1
+		if not _redundant_helper(sut.actOrder(i), keys, index, len(seq) + 1):
+			return False
+	return _redundant_helper(sut.actOrder(a), keys, index, len(seq) + 1)
+
+def _redundant_helper(aorder, keys, index, length):
+	return aorder in keys.keys() and (index, length) in keys[aorder]
+
 def score(pool):
 	global config
 	if pool[3] == 0.0 or len(pool[0].allBranches()) == 0 or len(pool[0].allStatements()) == 0:
@@ -188,8 +188,9 @@ def update_coverages(a, branches, statements, sut):
 				statements.add(s)
 
 def update_keys(seq, keys, sut):
-	index = 0
+	index = -1
 	for i in seq:
+		index += 1
 		if sut.actOrder(i) in keys.keys():
 			if (index, len(seq)) in keys[sut.actOrder(i)]:
 				continue
@@ -197,7 +198,6 @@ def update_keys(seq, keys, sut):
 				keys[sut.actOrder(i)].add((index, len(seq)))
 		else:
 			keys[sut.actOrder(i)] = set((index, len(seq)))
-		index += 1
 
 def main():
 	global config, fid, R, start, sequences, redundancies
