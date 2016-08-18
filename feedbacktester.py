@@ -76,16 +76,16 @@ def create_new_pool():
 
 def delete_pools(pools, num):
 	global pool_frequency
-	for key, value in sorted(pool_frequency.iteritems(), key = lambda (k, v): (k, v)):
-		print "pool", key, "is used", value, "times"
-	pool_frequency.clear()
+	#for key, value in sorted(pool_frequency.iteritems(), key = lambda (k, v): (k, v)):
+	#	print "pool", key, "is used", value, "times"
+	#pool_frequency.clear()
 	newpools = []
 	for pool in pools:
 		pool[7] = uniquness(pool, pools)
 	sortedpools = sorted(pools, key = lambda x: x[7], reverse = True)
-	print "In delete_pools function..."
+	#print "In delete_pools function..."
 	for pool in sortedpools:
-		print "pick pool", pool[0], "uniquness", pool[7], "score", pool[6]
+	#	print "pick pool", pool[0], "uniquness", pool[7], "score", pool[6]
 		newpools.append(pool)
 		if len(newpools) == num:
 			break
@@ -93,10 +93,10 @@ def delete_pools(pools, num):
 
 def feedback(pool, sequences, branches, statements):
 	global config, fid, R, start, num_redundancies, num_nonerrorseqs, num_errorseqs, pool_frequency
-	if pool[0] in pool_frequency.keys():
-		pool_frequency[pool[0]] += 1
-	else:
-		pool_frequency[pool[0]] = 1
+	#if pool[0] in pool_frequency.keys():
+	#	pool_frequency[pool[0]] += 1
+	#else:
+	#	pool_frequency[pool[0]] = 1
 	elapsed = time.time()
 	sut = pool[1]
 	seq = R.choice(pool[2])[:]
@@ -242,8 +242,8 @@ def main():
 			last_added = time.time()
 		if not feedback(select_pool(pools), sequences, branches, statements):
 			break
-		if config.delete and not config.single and len(pools) == config.mnp:
-		#if config.delete and not config.single and len(pools) > config.mnp:
+		#if config.delete and not config.single and len(pools) == config.mnp:
+		if config.delete and not config.single and len(pools) > config.mnp:
 			pools = delete_pools(pools, config.mnp / 2)
 	if config.internal:
 		internal(pools)
