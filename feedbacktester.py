@@ -8,6 +8,10 @@ from collections import namedtuple
 
 def parse_args():
 	parser = argparse.ArgumentParser()
+	parser.add_argument('-a', '--add', action = 'store_false',
+                            help = 'Not adding new pool.')
+	parser.add_argument('-d', '--delete', action = 'store_false',
+                            help = 'Not deleting pools.' )
 	parser.add_argument('-i', '--inp', type = int, default = 10,
                             help = 'Initial number of pools (10 default).')
 	parser.add_argument('-m', '--mnp', type = int, default = 100,
@@ -30,6 +34,9 @@ def parse_args():
                             help = 'Produce internal coverage report at the end.')
 	parser.add_argument('-S', '--single', action = 'store_true',
                             help = 'Using only single pool instead of multi pools.')
+	parser.add_argument('-W', '--WHICH', action = 'store_true',
+                            help = 'Using uniquness to select pool instead of coverage information.')
+
 	parsed_args = parser.parse_args(sys.argv[1:])
 	return (parsed_args, parser)
 
@@ -70,14 +77,15 @@ def create_new_pool():
 def delete_pools(pools, num):
 	global pool_frequency
 	for key, value in sorted(pool_frequency.iteritems(), key = lambda (k, v): (k, v)):
-		print "pool", key, "frequency", value
+		print "pool", key, "is used", value, "times"
 	pool_frequency.clear()
 	newpools = []
 	for pool in pools:
 		pool[7] = uniquness(pool, pools)
 	sortedpools = sorted(pools, key = lambda x: x[7], reverse = True)
+	print "In delete_pools function..."
 	for pool in sortedpools:
-		print "pick pool", pool[0], "score", pool[6], "uniquness", pool[7]
+		print "pick pool", pool[0], "uniquness", pool[7], "score", pool[6]
 		newpools.append(pool)
 		if len(newpools) == num:
 			break
@@ -111,7 +119,7 @@ def feedback(pool, sequences, branches, statements):
 		ok = sut.safely(a)
 		update_coverages(a, branches, statements, sut)
 		if not ok:
-			print "FIND BUG in ", time.time() - start, "SECONDS pid", pool[0]
+			print "FIND BUG in ", time.time() - start, "SECONDS using pool", pool[0]
 			num_errorseqs += 1
 			sequences.add(tuple_seq)
 			pool[3].append(seq)
@@ -147,7 +155,6 @@ def redundant(seq, sequences):
 	else:
 		return False
 
-
 def score(pool):
 	global config
 	if pool[5] == 0.0 or len(pool[1].allBranches()) == 0 or len(pool[1].allStatements()) == 0:
@@ -163,11 +170,16 @@ def select_pool(pools):
 		return pools[0]
 	maxscore = -1.0
 	for pool in pools:
-		pool[6] = score(pool)
-		if pool[6] == float('inf'):
+		if config.WHICH:
+			pool[7] = uniquness(pool, pools)
+			s = pool[7]
+		else:
+			pool[6] = score(pool)
+			s = pool[6]
+		if s == float('inf'):
 			return pool
-		if pool[6] > maxscore:
-			maxscore = pool[6]
+		if s > maxscore:
+			maxscore = s
 			selected = pool
 	return selected
 
@@ -225,12 +237,13 @@ def main():
 		pools.append(create_new_pool())
 	last_added = time.time()
 	while time.time() - start < config.timeout:
-		if not config.single and time.time() - last_added > config.nseconds:
+		if config.add and not config.single and time.time() - last_added > config.nseconds:
 			pools.append(create_new_pool())
 			last_added = time.time()
 		if not feedback(select_pool(pools), sequences, branches, statements):
 			break
-		if not config.single and len(pools) > config.mnp:
+		if config.delete and not config.single and len(pools) == config.mnp:
+		#if config.delete and not config.single and len(pools) > config.mnp:
 			pools = delete_pools(pools, config.mnp / 2)
 	if config.internal:
 		internal(pools)
