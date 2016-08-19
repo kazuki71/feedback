@@ -8,10 +8,8 @@ from collections import namedtuple
 
 def parse_args():
 	parser = argparse.ArgumentParser()
-	parser.add_argument('-a', '--add', action = 'store_false',
-                            help = 'Not adding new pool.')
-	parser.add_argument('-d', '--delete', action = 'store_false',
-                            help = 'Not deleting pools.' )
+	parser.add_argument('-d', '--delete', action = 'store_true',
+                            help = 'Delete corresponding sequences from all_sequences when delete pool.')
 	parser.add_argument('-i', '--inp', type = int, default = 10,
                             help = 'Initial number of pools (10 default).')
 	parser.add_argument('-m', '--mnp', type = int, default = 100,
@@ -53,13 +51,13 @@ def covered(pool):
 	coverages = pool[1].currStatements() if config.which else pool[1].currBranches()
 	for c in coverages:
 		if config.notcount:
-			if not c in pool[4]:
-				pool[4][c] = 1
+			if not c in pool[6]:
+				pool[6][c] = 1
 		else:
-			if c in pool[4]:
-				pool[4][c] += 1
+			if c in pool[6]:
+				pool[6][c] += 1
 			else:
-				pool[4][c] = 1
+				pool[6][c] = 1
 
 def create_new_pool():
 	global pid
@@ -68,27 +66,36 @@ def create_new_pool():
 	### pool[1]: sut object
 	### pool[2]: list of non-error sequences
 	### pool[3]: list of error sequences
-	### pool[4]: which coverage this pool covers
-	### pool[5]: how long this pool is used
-	### pool[6]: how many times this pool is selected
-	### pool[7]: score of this pool
-	### pool[8]: uniquness of this pool
-	return [pid, SUT.sut(), [[]], [], dict(), 0.0, 0, 0.0, 0.0]
+	### pool[4]: set of non-error sequences
+	### pool[5]: set of error sequences
+	### pool[6]: dictionary, key - coverage, value - number of counts the coverage is covered 
+	### pool[7]: time of using this pool by feedback()
+	### pool[8]: number of counts this pool is selected by select_pool
+	### pool[9]: score by score()
+	### pool[10]: uniquness by uniquness()
+	return [pid, SUT.sut(), [[]], [], set(), set(), dict(), 0.0, 0, 0.0, 0.0]
 
 def delete_pools(pools, num):
-	global pool_frequency
+	global pool_frequency, all_sequences, config
+	if config.delete:
+		all_sequences.clear()
 	for key, value in sorted(pool_frequency.iteritems(), key = lambda (k, v): (k, v)):
 		print "pool", key, "is used", value, "times"
 	pool_frequency.clear()
 	newpools = []
 	for pool in pools:
-		pool[8] = uniquness(pool, pools)
-	sortedpools = sorted(pools, key = lambda x: x[8], reverse = True)
+		pool[10] = uniquness(pool, pools)
+	sortedpools = sorted(pools, key = lambda x: x[10], reverse = True)
 	for pool in sortedpools:
-		print "pick pool", pool[0], "uniquness", pool[8], "score", pool[7], "time", pool[5], "count", pool[6], "coverage", len(pool[1].allBranches()), "time"
 		newpools.append(pool)
+		if config.delete:
+			all_sequences = all_sequences.union(pool[4])
+			all_sequences = all_sequences.union(pool[5])
 		if len(newpools) == num:
 			break
+	sortednewpools = sorted(newpools, key = lambda x: x[0])
+	for pool in sortednewpools:
+		print "pick pool", pool[0], "time", pool[7], "count", pool[8], "score", pool[9], "uniquness", pool[10]
 	return newpools
 
 def feedback(pool, all_sequences, all_branches, all_statements):
@@ -119,11 +126,12 @@ def feedback(pool, all_sequences, all_branches, all_statements):
 		ok = sut.safely(a)
 		update_coverages(a, all_branches, all_statements, sut)
 		if not ok:
-			print "FIND BUG in ", time.time() - start, "SECONDS using pool", pool[0]
+			print "FIND BUG in ", time.time() - start, "SECONDS by pool", pool[0]
 			num_errorseqs += 1
 			all_sequences.add(tuple_seq)
+			pool[5].add(tuple_seq)
 			pool[3].append(seq)
-			pool[5] += (time.time() - elapsed)
+			pool[7] += (time.time() - elapsed)
 			fid = handle_failure(sut, fid, start)
 			return True
 		if time.time() - start > config.timeout:
@@ -132,8 +140,9 @@ def feedback(pool, all_sequences, all_branches, all_statements):
 		covered(pool)
 	num_nonerrorseqs += 1
 	all_sequences.add(tuple_seq)
+	pool[5].add(tuple_seq)
 	pool[2].append(seq)
-	pool[5] += (time.time() - elapsed)
+	pool[7] += (time.time() - elapsed)
 	return True
 
 def handle_failure(sut, fid, start):
@@ -157,14 +166,12 @@ def redundant(tuple_seq, all_sequences):
 
 def score(pool):
 	global config
-	if pool[5] == 0.0 or pool[6] == 0 or len(pool[1].allBranches()) == 0 or len(pool[1].allStatements()) == 0:
+	if pool[7] == 0.0 or pool[8] == 0 or len(pool[1].allBranches()) == 0 or len(pool[1].allStatements()) == 0:
 		return float('inf')
 	if config.which:
-		#return len(pool[1].allStatements()) * 1.0e9 / pool[5]
-		return len(pool[1].allStatements()) * 1.0e9 / pool[5]
+		return len(pool[1].allStatements()) * 1.0e9 / pool[7]
 	else:
-		#return len(pool[1].allBranches()) * 1.0e9 / pool[5]
-		return len(pool[1].allBranches()) * 1.0e9 / (pool[5] - pool[8] * 2.0)
+		return len(pool[1].allBranches()) * 1.0e9 / pool[7]
 
 def select_pool(pools):
 	global config
@@ -173,34 +180,34 @@ def select_pool(pools):
 	maxscore = -1.0
 	for pool in pools:
 		if config.WHICH:
-			pool[8] = uniquness(pool, pools)
-			s = pool[8]
+			pool[10] = uniquness(pool, pools)
+			s = pool[10]
 		else:
-			pool[7] = score(pool)
-			s = pool[7]
+			pool[9] = score(pool)
+			s = pool[9]
 		if s == float('inf'):
-			pool[6] += 1
+			pool[8] += 1
 			return pool
 		if s > maxscore:
 			maxscore = s
 			selected = pool
-	selected[6] += 1
+	selected[8] += 1
 	return selected
 
 def uniquness(pool, pools):
-	if pool[5] == 0.0 or pool[6] == 0 or len(pool[1].allBranches()) == 0 or len(pool[1].allStatements()) == 0:
+	if pool[7] == 0.0 or pool[8] == 0 or len(pool[1].allBranches()) == 0 or len(pool[1].allStatements()) == 0:
 		return float('inf')
 	uniquness = 0.0
-	for c in pool[4]:
+	for c in pool[6]:
 		uniquness += _uniquness_helper(pool, c, pools)
-	return uniquness / len(pool[4])
+	return uniquness / len(pool[6])
 
 def _uniquness_helper(pool, c, pools):
 	totalcovered = 0.0
 	for p in pools:
-		if c in p[4]:
-			totalcovered += p[4][c]
-	return pool[4][c] / totalcovered
+		if c in p[6]:
+			totalcovered += p[6][c]
+	return pool[6][c] / totalcovered
 
 def update_coverages(a, all_branches, all_statements, sut):
 	global config, start
@@ -241,13 +248,12 @@ def main():
 		pools.append(create_new_pool())
 	last_added = time.time()
 	while time.time() - start < config.timeout:
-		if config.add and not config.single and time.time() - last_added > config.nseconds:
+		if not config.single and time.time() - last_added > config.nseconds:
 			pools.append(create_new_pool())
 			last_added = time.time()
 		if not feedback(select_pool(pools), all_sequences, all_branches, all_statements):
 			break
-		if config.delete and not config.single and len(pools) == config.mnp:
-		#if config.delete and not config.single and len(pools) > config.mnp:
+		if not config.single and len(pools) == config.mnp:
 			pools = delete_pools(pools, config.mnp / 2)
 	if config.internal:
 		internal(pools)
