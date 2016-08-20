@@ -32,9 +32,10 @@ def parse_args():
                             help = 'Produce internal coverage report at the end.')
 	parser.add_argument('-S', '--single', action = 'store_true',
                             help = 'Using only single pool instead of multi pools.')
+	parser.add_argument('-T', '--TWO', action = 'store_true',
+                            help = 'Using two lists to store pools.')
 	parser.add_argument('-W', '--WHICH', action = 'store_true',
                             help = 'Using uniquness to select pool instead of coverage information.')
-
 	parsed_args = parser.parse_args(sys.argv[1:])
 	return (parsed_args, parser)
 
@@ -76,12 +77,12 @@ def create_new_pool():
 	return [pid, SUT.sut(), [[]], [], set(), set(), dict(), 0.0, 0, 0.0, 0.0]
 
 def delete_pools(pools, num):
-	global pool_frequency, all_sequences, config
+	global all_sequences, config, pool_frequency
 	if config.delete:
 		all_sequences.clear()
-	for key, value in sorted(pool_frequency.iteritems(), key = lambda (k, v): (k, v)):
-		print "pool", key, "is used", value, "times"
-	pool_frequency.clear()
+	#for key, value in sorted(pool_frequency.iteritems(), key = lambda (k, v): (k, v)):
+	#	print "pool", key, "is used", value, "times"
+	#pool_frequency.clear()
 	newpools = []
 	for pool in pools:
 		pool[10] = uniquness(pool, pools)
@@ -89,22 +90,21 @@ def delete_pools(pools, num):
 	for pool in sortedpools:
 		newpools.append(pool)
 		if config.delete:
-			all_sequences = all_sequences.union(pool[4])
-			all_sequences = all_sequences.union(pool[5])
+			all_sequences = all_sequences.union(pool[4]).union(pool[5])
 		if len(newpools) == num:
 			break
-	sortednewpools = sorted(newpools, key = lambda x: x[0])
-	for pool in sortednewpools:
-		print "pick pool", pool[0], "time", pool[7], "count", pool[8], "score", pool[9], "uniquness", pool[10]
+	#sortednewpools = sorted(newpools, key = lambda x: x[0])
+	#for pool in sortednewpools:
+	#	print "pick pool", pool[0], "time", pool[7], "count", pool[8], "score", pool[9], "uniquness", pool[10]
 	return newpools
 
 def feedback(pool, all_sequences, all_branches, all_statements):
-	global config, fid, R, start, num_redundancies, num_nonerrorseqs, num_errorseqs, pool_frequency
+	global config, fid, num_redundancies, num_nonerrorseqs, num_errorseqs, pool_frequency, R, start
 	elapsed = time.time()
-	if pool[0] in pool_frequency.keys():
-		pool_frequency[pool[0]] += 1
-	else:
-		pool_frequency[pool[0]] = 1
+	#if pool[0] in pool_frequency.keys():
+	#	pool_frequency[pool[0]] += 1
+	#else:
+	#	pool_frequency[pool[0]] = 1
 	sut = pool[1]
 	seq = R.choice(pool[2])[:]
 	sut.replay(seq)
@@ -129,8 +129,8 @@ def feedback(pool, all_sequences, all_branches, all_statements):
 			print "FIND BUG in ", time.time() - start, "SECONDS by pool", pool[0]
 			num_errorseqs += 1
 			all_sequences.add(tuple_seq)
-			pool[5].add(tuple_seq)
 			pool[3].append(seq)
+			pool[5].add(tuple_seq)
 			pool[7] += (time.time() - elapsed)
 			fid = handle_failure(sut, fid, start)
 			return True
@@ -140,8 +140,8 @@ def feedback(pool, all_sequences, all_branches, all_statements):
 		covered(pool)
 	num_nonerrorseqs += 1
 	all_sequences.add(tuple_seq)
-	pool[5].add(tuple_seq)
 	pool[2].append(seq)
+	pool[5].add(tuple_seq)
 	pool[7] += (time.time() - elapsed)
 	return True
 
@@ -155,7 +155,6 @@ def internal(pools):
 	for pool in pools:
 		print "Producing internal coverage report for pool", i, "..."
 		pool[1].internalReport()
-		print ""
 		i += 1
 
 def redundant(tuple_seq, all_sequences):
@@ -227,7 +226,7 @@ def update_coverages(a, all_branches, all_statements, sut):
 				all_statements.add(s)
 
 def main():
-	global config, fid, pid, R, start, all_sequences, num_redundancies, num_nonerrorseqs, num_errorseqs, pool_frequency
+	global all_sequences, config, fid, num_redundancies, num_nonerrorseqs, num_errorseqs, pid, pool_frequency, R, start
 	parsed_args, parser = parse_args()
 	config = make_config(parsed_args, parser)
 	print('Feedback-directed/controlled random testing using config={}'.format(config))
