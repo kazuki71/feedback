@@ -32,10 +32,6 @@ def parse_args():
                             help = 'Produce internal coverage report at the end.')
 	parser.add_argument('-S', '--single', action = 'store_true',
                             help = 'Using only single pool instead of multi pools.')
-	parser.add_argument('-T', '--TWO', action = 'store_true',
-                            help = 'Using two lists to store pools.')
-	parser.add_argument('-W', '--WHICH', action = 'store_true',
-                            help = 'Using uniquness to select pool instead of coverage information.')
 	parsed_args = parser.parse_args(sys.argv[1:])
 	return (parsed_args, parser)
 
@@ -178,17 +174,12 @@ def select_pool(pools):
 		return pools[0]
 	maxscore = -1.0
 	for pool in pools:
-		if config.WHICH:
-			pool[10] = uniquness(pool, pools)
-			s = pool[10]
-		else:
-			pool[9] = score(pool)
-			s = pool[9]
-		if s == float('inf'):
+		pool[9] = score(pool)
+		if pool[9] == float('inf'):
 			pool[8] += 1
 			return pool
-		if s > maxscore:
-			maxscore = s
+		if pool[9] > maxscore:
+			maxscore = pool[9]
 			selected = pool
 	selected[8] += 1
 	return selected
