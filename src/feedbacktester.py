@@ -45,54 +45,11 @@ def make_config(pargs, parser):
 	nt_config = Config(*arg_list)
 	return nt_config
 
-def covered(pool):
-	global config
-	coverages = pool.sut.currStatements() if config.which else pool.sut.currBranches()
-	for c in coverages:
-		if config.notcount:
-			if not c in pool.dict_cover:
-				pool.dict_cover[c] = 1
-		else:
-			if c in pool.dict_cover:
-				pool.dict_cover[c] += 1
-			else:
-				pool.dict_cover[c] = 1
-
-def handle_failure(sut, start):
-	global V
-	filename = 'failure' + `V.fid` + '.test'
-	sut.saveTest(pool.sut.test(), filename)
-	V.fid = V.fid + 1
-
 def internal(pools):
 	print "NEED TO IMPLEMENT"
 
 def quick_tests(pools):
 	print "NEED TO IMPLEMENT"
-
-def redundant(tuple_seq):
-	global V
-	if tuple_seq in V.sequences:
-		return True
-	else:
-		return False
-
-def update_coverages(a, pool):
-	global config, V, start
-	flag = True
-	if pool.sut.newBranches() != set([]):
-		for b in pool.sut.newBranches():
-			if not b in V.branches:
-				V.branches.add(b)
-				if config.running:
-					if flag:
-						print "ACTION:", pool.sut.prettyName(a[0])
-						flag = False
-					print time.time() - start, len(V.branches), "New branch", b
-	if pool.sut.newStatements() != set([]):
-		for s in pool.sut.newStatements():
-			if not s in V.statements:
-				V.statements.add(s)
 
 def main():
 	parsed_args, parser = parse_args()
