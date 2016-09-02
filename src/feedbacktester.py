@@ -5,8 +5,8 @@ import sut as SUT
 import sys
 import time
 from collections import namedtuple
-from Variables import *
 from Pools import *
+from Variables import *
 
 def parse_args():
 	parser = argparse.ArgumentParser()
@@ -45,32 +45,45 @@ def make_config(pargs, parser):
 	nt_config = Config(*arg_list)
 	return nt_config
 
-def internal(pools):
+def internal():
 	print "NEED TO IMPLEMENT"
 
-def quick_tests(pools):
+def quick_tests():
 	print "NEED TO IMPLEMENT"
 
 def main():
+	# parse command line arguments
 	parsed_args, parser = parse_args()
 	config = make_config(parsed_args, parser)
 	print('Feedback-directed/controlled random testing using config={}'.format(config))
+
+	# init
 	P = Pools()
-	R = random.Random(config.seed)
-	V = Variables()
+	R = random.Random(config.seed)		
+	V = Variables()	
 	start = time.time()
+
+	# feedback controlled random test generation
+	# add n pools
 	n = 1 if config.single else config.inp
 	for i in xrange(n):
 		P.create_pool()
 	last_added = time.time()
+
 	while time.time() - start < config.timeout:
+		# add a new pool for each n seconds
 		if not config.single and time.time() - last_added > config.nseconds:
 			P.create_pool()
 			last_added = time.time()
+
+		# select a pool and run feedback directed random test generation
 		if not P.select_pool(config).feedback(config, V, R, start):
 			break
+
+		# delete pools when |pools| >= mnp (maximum number of pools)
 		if not config.single and len(P.pools) == config.mnp:
 			P.delete_pools(config.mnp / 2, config, V)
+
 	print time.time() - start, "TOTAL RUNTIME"
 	print len(V.sequences), "SEQUENCES (NON ERROR + ERROR)"
 	print V.num_nseqs, "NON ERROR SEQUENCES"

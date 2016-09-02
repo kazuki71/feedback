@@ -13,6 +13,9 @@ class Pools:
 		self.pools.append(Pool(self.pid))
 
 	def select_pool(self, config):
+		"""
+		select pool, which has maxmum coverage score
+		"""
 		maxscore = -1.0
 		for pool in self.pools:
 			pool.update_score(config)
@@ -26,6 +29,9 @@ class Pools:
 		return selected
 
 	def delete_pools(self, num, config, V):
+		"""
+		delete and select num pools which are more uniqueness than others
+		"""
 		if config.delete:
 			V.sequences.clear()
 		for key, value in sorted(V.pool_frequency.iteritems(), key = lambda (k, v): (k, v)):
@@ -43,5 +49,5 @@ class Pools:
 				break
 		sortednewpools = sorted(newpools, key = lambda x: x.pid)
 		for pool in sortednewpools:
-			print "pick pool", pool.pid, "time", pool.time, "count", pool.time, "score", pool.score, "uniqueness", pool.uniqueness
+			print "select pool", pool.pid, "time", pool.time, "count", pool.time, "score", pool.score, "uniqueness", pool.uniqueness
 		self.pools = newpools

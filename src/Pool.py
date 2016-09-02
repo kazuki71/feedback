@@ -19,19 +19,10 @@ class Pool:
 		self.score = 0.0			# score of this pool
 		self.uniqueness = 0.0		# uniqueness of this pool
 
-	def covered(self, config):
-		coverages = self.sut.currStatements() if config.which else self.sut.currBranches()
-		for c in coverages:
-			if config.notcount:
-				if not c in self.dict_cover:
-					self.dict_cover[c] = 1
-			else:
-				if c in self.dict_cover:
-					self.dict_cover[c] += 1
-				else:
-					self.dict_cover[c] = 1
-
 	def feedback(self, config, V, R, start):
+		"""
+		feedback directed random test generation
+		"""
 		elapsed = time.time()
 		if self.pid in V.pool_frequency.keys():
 			V.pool_frequency[self.pid] += 1
@@ -67,8 +58,6 @@ class Pool:
 				return True
 			if time.time() - start > config.timeout:
 				return False
-		if not config.single:
-			self.covered(config)
 		V.num_nseqs += 1
 		V.sequences.add(tuple_seq)
 		self.nseqs.append(seq)
@@ -82,6 +71,10 @@ class Pool:
 		V.fid = V.fid + 1
 
 	def redundant(self, tuple_seq, V):
+		"""
+		V.sequences is set where it contains all sequences (non-error + error) generated
+	        by all pools
+		"""
 		if tuple_seq in V.sequences:
 			return True
 		else:
@@ -102,8 +95,23 @@ class Pool:
 			for s in self.sut.newStatements():
 				if not s in V.statements:
 					V.statements.add(s)
+		if not config.single:
+			coverages = self.sut.currStatements() if config.which else self.sut.currBranches()
+			for c in coverages:
+				if config.notcount:
+					if not c in self.dict_cover:
+						self.dict_cover[c] = 1
+				else:
+					if c in self.dict_cover:
+						self.dict_cover[c] += 1
+					else:
+						self.dict_cover[c] = 1
 
 	def update_score(self, config):
+		"""
+		if pool is not investigated enough, set score as infinite
+		otherwise, score = len(coverage by the pool) / time of using the pool
+		"""
 		if self.time == 0.0 or self.count == 0 or len(self.sut.allBranches()) == 0 or len(self.sut.allStatements()) == 0:
 			self.score = float('inf')
 		elif config.which:
@@ -112,6 +120,10 @@ class Pool:
 			self.score = len(self.sut.allBranches()) * 1.0e9 / self.time
 
 	def update_uniqueness(self, pools):
+		"""
+		if pool is not investigated enough, set uniqueness as infinite
+		otherwise, check how unique coverages the pool covers compared with other pools 
+		"""
 		if self.time == 0.0 or self.count == 0 or len(self.sut.allBranches()) == 0 or len(self.sut.allStatements()) == 0:
 			self.uniqueness = float('inf')
 			return
