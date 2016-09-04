@@ -15,8 +15,8 @@ class Pool:
 		self.set_eseqs = set()		# set of error sequences
 		self.dict_cover = dict()	# dictionary, key: coverage by this pool, value: frequency of coverage by this pool
 		self.time = 0.0			# time of using this pool
-		self.count = 0			# frequency of using this pool
-		self.score = 0.0			# score of this pool
+		self.count = 0			# how many times this pool is selected in select_pool()
+		self.score = 0.0		# score of this pool
 		self.uniqueness = 0.0		# uniqueness of this pool
 
 	def feedback(self, config, V, R, start):
@@ -24,12 +24,12 @@ class Pool:
 		feedback directed random test generation
 		"""
 		elapsed = time.time()
-		if self.pid in V.pool_frequency.keys():
+		seq = R.choice(self.nseqs)[:]
+		self.sut.replay(seq)
+		if self.pid in V.pool_frequency:
 			V.pool_frequency[self.pid] += 1
 		else:
 			V.pool_frequency[self.pid] = 1
-		seq = R.choice(self.nseqs)[:]
-		self.sut.replay(seq)
 		if time.time() - start > config.timeout:
 			return False
 		n = R.randint(2, 100) if R.randint(0, 9) == 0 else 1
@@ -67,7 +67,7 @@ class Pool:
 
 	def handle_failure(self, V, start):
 		filename = 'failure' + `V.fid` + '.test'
-		sut.saveTest(self.sut.test(), filename)
+		self.sut.saveTest(self.sut.test(), filename)
 		V.fid = V.fid + 1
 
 	def redundant(self, tuple_seq, V):
@@ -119,13 +119,13 @@ class Pool:
 		else:
 			self.score = len(self.sut.allBranches()) * 1.0e9 / self.time
 
-	def update_uniqueness(self, pools):
+	def update_uniqueness(self, pools, config):
 		"""
 		if pool is not investigated enough, set uniqueness as infinite
 		otherwise, check how unique coverages the pool covers compared with other pools 
 		"""
 		if self.time == 0.0 or self.count == 0 or len(self.sut.allBranches()) == 0 or len(self.sut.allStatements()) == 0:
-			self.uniqueness = float('inf')
+			self.uniqueness = -1.0 if config.pools_with_two_lists else float('inf')
 			return
 		uniqueness = 0.0
 		for c in self.dict_cover:

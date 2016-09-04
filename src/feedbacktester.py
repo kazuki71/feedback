@@ -6,6 +6,7 @@ import sys
 import time
 from collections import namedtuple
 from Pools import *
+from PoolsWithTwoLists import *
 from Variables import *
 
 def parse_args():
@@ -18,6 +19,8 @@ def parse_args():
                             help = 'Maximum number of pools (100 default).')
 	parser.add_argument('-n', '--nseconds', type = int, default = 1,
                             help = 'Each n seconds new pool is added (default each 1 second).')
+	parser.add_argument('-p', '--pools_with_two_lists', action = 'store_true',
+                            help = 'Using PoolsWithTwoLists class instead of Pools class.')
 	parser.add_argument('-q', '--quickTests', action = 'store_true',
                             help = 'Produce quick tests for coverage.')
 	parser.add_argument('-r', '--running', action = 'store_true',
@@ -58,7 +61,7 @@ def main():
 	print('Feedback-directed/controlled random testing using config={}'.format(config))
 
 	# init
-	P = Pools()
+	P = PoolsWithTwoLists() if config.pools_with_two_lists else Pools()
 	R = random.Random(config.seed)		
 	V = Variables()	
 	start = time.time()
@@ -80,8 +83,8 @@ def main():
 		if not P.select_pool(config).feedback(config, V, R, start):
 			break
 
-		# delete pools when |pools| >= mnp (maximum number of pools)
-		if not config.single and len(P.pools) == config.mnp:
+		# delete pools when |pools| > mnp (maximum number of pools)
+		if not config.single and P.length() > config.mnp:
 			P.delete_pools(config.mnp / 2, config, V)
 
 	print time.time() - start, "TOTAL RUNTIME"
