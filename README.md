@@ -16,7 +16,7 @@ Then,
 git clone https://github.com/kazuki71/feedback.git
 ```
 
-### How to run
+## How to run
 
 For running feedbacktester, need to prepre software under test (sut) by TSTL. For example, supporse avl.py is our sut. Create tstl file to indicate what aspects of avl.py you want to test. Let this tstl file be avl.tstl. Then, type the following command to generate sut.py at the same directory with avl.py and avl.tstl:
 ```
