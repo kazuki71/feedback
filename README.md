@@ -24,7 +24,8 @@ tstl avl.tstl
 ```
 There are avl.py and avl.tstl in example/
 
-Then, type the following commands to run feedbacktester at the same directory with avl.py, sut.py, feedbacktester,py, Pool.py Pools.py, PoolsWithTwoLists.py, and Variables.py.
+Then, type the following commands to run feedbacktester at the same directory with avl.py, sut.py, feedbacktester.py, Pool.py, Pools.py, PoolsWithTwoLists.py, and Variables.py.
+feedbacktester.py, Pool.py, Pools.py, PoolsWithTwoLists.py and Variables.py are in /src.
 
 For running Feedback-directed Random Test Generation:
 ```
