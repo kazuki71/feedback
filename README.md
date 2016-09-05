@@ -1,11 +1,21 @@
 # feedbacktester
 
 feedbacktester is random test generator in Python 2.x for The Template Scripting Testing Language (TSTL): https://github.com/agroce/tstl, which is a research project by Dr. Alex Groce. feedbacktester provides two random test generators: Feedback-directed Random Test Generation by Carlos Pacheco, Shuvendu K. Lahiri, Michael D. Ernst, and Thomas Ball, and Feedback-controlled Random Test Generation by Kohsuke Yatoh, Kazunori Sakamoto, Fuyuki Ishikawa and Shinichi Honiden.
+
+## Installing
+
+Firstly, need to install tstl.
+```
+git clone https://github.com/agroce/tstl.git
+cd tstl
+python setup.py install		# need to run this command as superuser, so make sure to run with su or sudo
+```
+
+Then,
+```
+git clone https://github.com/kazuki71/feedback.git
+```
 <!---
-## Getting Started
-
-These instructions will get you a copy of the project up and running on your local machine for development and testing purposes. See deployment for notes on how to deploy the project on a live system.
-
 ### Prerequisities
 
 What things you need to install the software and how to install them
