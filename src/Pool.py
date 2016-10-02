@@ -39,15 +39,15 @@ class Pool:
 			seq.append(a)
 			tuple_seq = tuple(seq)
 			if self.redundant(tuple_seq, V):
-				del seq[-1]
 				num_skips += 1
 				if n == num_skips:
 					V.num_redundancies += 1
 					return True
 				continue
 			ok = self.sut.safely(a)
+			propok = self.sut.check()
 			self.update_coverages(a, config, V, start)
-			if not ok:
+			if (not ok) or (not propok):
 				print "FIND BUG in ", time.time() - start, "SECONDS by pool", self.pid
 				V.num_eseqs += 1
 				V.sequences.add(tuple_seq)
@@ -64,7 +64,7 @@ class Pool:
 		self.set_nseqs.add(tuple_seq)
 		self.time += (time.time() - elapsed)
 		return True
-
+	
 	def handle_failure(self, V, start):
 		filename = 'failure' + `V.fid` + '.test'
 		self.sut.saveTest(self.sut.test(), filename)

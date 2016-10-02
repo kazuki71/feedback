@@ -20,6 +20,7 @@ class Pools:
 
 	def create_pool(self):
 		self.pid += 1
+		#print "pool", self.pid, "is added"
 		self.pools.append(Pool(self.pid))
 
 	def select_pool(self, config):
@@ -47,10 +48,10 @@ class Pools:
 		"""
 		if config.delete:
 			V.sequences.clear()
-		print "*****************************************************"
-		print "*****************************************************"
-		for key, value in sorted(V.pool_frequency.iteritems(), key = lambda (k, v): (k, v)):
-			print "pool", key, "is selected", value, "times"
+		##print "*****************************************************"
+		##print "*****************************************************"
+		##for key, value in sorted(V.pool_frequency.iteritems(), key = lambda (k, v): (k, v)):
+		##	print "pool", key, "is selected", value, "times"
 		V.pool_frequency.clear()
 		newpools = []
 		all_pools = self.get_all_pools()
@@ -64,5 +65,5 @@ class Pools:
 			if len(newpools) == num:
 				self._update_pools(newpools)
 				break
-		for p in sorted(newpools, key = lambda x: x.pid):
-			print "pool", p.pid, "is selected"
+		##for p in sorted(newpools, key = lambda x: x.pid):
+		##	print "pool", p.pid, "is survived"
