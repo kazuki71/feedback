@@ -26,10 +26,8 @@ class Pool:
 		elapsed = time.time()
 		seq = R.choice(self.nseqs)[:]
 		self.sut.replay(seq)
-		if self.pid in V.pool_frequency:
-			V.pool_frequency[self.pid] += 1
-		else:
-			V.pool_frequency[self.pid] = 1
+		acTable = dict.fromkeys(self.sut.actionClasses(), 0)
+		V.pool_frequency[self.pid] = V.pool_frequency[self.pid] + 1 if self.pid in V.pool_frequency else 1
 		if time.time() - start > config.timeout:
 			return False
 		n = R.randint(2, 100) if R.randint(0, 9) == 0 else 1
@@ -46,6 +44,7 @@ class Pool:
 				continue
 			ok = self.sut.safely(a)
 			propok = self.sut.check()
+			acTable[self.sut.actionClass(a)] += 1
 			self.update_coverages(a, config, V, start)
 			if (not ok) or (not propok):
 				print "FIND BUG in ", time.time() - start, "SECONDS by pool", self.pid
@@ -58,11 +57,12 @@ class Pool:
 				return True
 			if time.time() - start > config.timeout:
 				return False
-		V.num_nseqs += 1
+		if max(acTable.values()) <= 10:
+			V.num_nseqs += 1
+			self.nseqs.append(seq)
+			self.set_nseqs.add(tuple_seq)
+			self.time += (time.time() - elapsed)
 		V.sequences.add(tuple_seq)
-		self.nseqs.append(seq)
-		self.set_nseqs.add(tuple_seq)
-		self.time += (time.time() - elapsed)
 		return True
 	
 	def handle_failure(self, V, start):
