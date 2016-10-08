@@ -11,4 +11,3 @@ class Variables:
 		self.sequences = set()		# a set of sequences (non-error + error)
 		self.branches = set()		# a set of branches coverage
 		self.statements = set()		# a set of statements coverage
-		self.pool_frequency = dict()	# key is Pool.pid, value is how many times Pool.pid is selected for Pool.feedback()

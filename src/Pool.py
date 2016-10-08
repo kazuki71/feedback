@@ -11,9 +11,7 @@ class Pool:
 		self.sut = SUT.sut()		# SUT object
 		self.nseqs = [[]]		# list of non-error sequences
 		self.eseqs = []			# list of error sequences
-		self.set_nseqs = set()		# set of non-error sequences
-		self.set_eseqs = set()		# set of error sequences
-		self.dict_cover = dict()	# dictionary, key: coverage by this pool, value: frequency of coverage by this pool
+		self.covered = dict()		# dictionary, key: coverage by this pool, value: frequency of coverage by this pool
 		self.time = 0.0			# time of using this pool
 		self.count = 0			# how many times this pool is selected in select_pool()
 		self.score = 0.0		# score of this pool
@@ -23,15 +21,14 @@ class Pool:
 		"""
 		feedback directed random test generation
 		"""
-		elapsed = time.time()
 		seq = R.choice(self.nseqs)[:]
 		self.sut.replay(seq)
 		acTable = dict.fromkeys(self.sut.actionClasses(), 0)
-		V.pool_frequency[self.pid] = V.pool_frequency[self.pid] + 1 if self.pid in V.pool_frequency else 1
 		if time.time() - start > config.timeout:
 			return False
 		n = R.randint(2, 100) if R.randint(0, 9) == 0 else 1
 		num_skips = 0
+		elapsed = time.time()
 		for i in xrange(n):
 			a = self.sut.randomEnabled(R)
 			seq.append(a)
@@ -45,23 +42,20 @@ class Pool:
 			ok = self.sut.safely(a)
 			propok = self.sut.check()
 			acTable[self.sut.actionClass(a)] += 1
-			self.update_coverages(a, config, V, start)
 			if (not ok) or (not propok):
+				self.time += (time.time() - elapsed)
 				print "FIND BUG in ", time.time() - start, "SECONDS by pool", self.pid
 				V.num_eseqs += 1
 				V.sequences.add(tuple_seq)
 				self.eseqs.append(seq)
-				self.set_eseqs.add(tuple_seq)
-				self.time += (time.time() - elapsed)
 				self.handle_failure(V, start)
 				return True
 			if time.time() - start > config.timeout:
 				return False
 		if max(acTable.values()) <= 10:
+			self.time += (time.time() - elapsed)
 			V.num_nseqs += 1
 			self.nseqs.append(seq)
-			self.set_nseqs.add(tuple_seq)
-			self.time += (time.time() - elapsed)
 		V.sequences.add(tuple_seq)
 		return True
 	
@@ -80,32 +74,16 @@ class Pool:
 		else:
 			return False
 
-	def update_coverages(self, a, config, V, start):
-		flag = True
-		if self.sut.newBranches() != set([]):
-			for b in self.sut.newBranches():
+	def update_coverage(self, config, V):
+		if self.sut.currBranches() != set([]):
+			for b in self.sut.currBranches():
+				self.covered[b] = self.covered[b] + 1 if b in self.covered else 1
 				if not b in V.branches:
 					V.branches.add(b)
-					if config.running:
-						if flag:
-							print "ACTION:", sel.sut.prettyName(a[0])
-							flag = False
-						print time.time() - start, len(V.branches), "New branch", b
-		if self.sut.newStatements() != set([]):
-			for s in self.sut.newStatements():
+		if self.sut.currStatements() != set([]):
+			for s in self.sut.currStatements():
 				if not s in V.statements:
 					V.statements.add(s)
-		if not config.single:
-			coverages = self.sut.currStatements() if config.which else self.sut.currBranches()
-			for c in coverages:
-				if config.notcount:
-					if not c in self.dict_cover:
-						self.dict_cover[c] = 1
-				else:
-					if c in self.dict_cover:
-						self.dict_cover[c] += 1
-					else:
-						self.dict_cover[c] = 1
 
 	def update_score(self, config):
 		"""
@@ -114,8 +92,6 @@ class Pool:
 		"""
 		if self.time == 0.0 or self.count == 0 or len(self.sut.allBranches()) == 0 or len(self.sut.allStatements()) == 0:
 			self.score = float('inf')
-		elif config.which:
-			self.score = len(self.sut.allStatements()) * 1.0e9 / self.time
 		else:
 			self.score = len(self.sut.allBranches()) * 1.0e9 / self.time
 
@@ -125,16 +101,16 @@ class Pool:
 		otherwise, check how unique coverages the pool covers compared with other pools 
 		"""
 		if self.time == 0.0 or self.count == 0 or len(self.sut.allBranches()) == 0 or len(self.sut.allStatements()) == 0:
-			self.uniqueness = -1.0 if config.pools_with_two_lists else float('inf')
-			return
-		uniqueness = 0.0
-		for c in self.dict_cover:
-			uniqueness += self._update_uniqueness_helper(c, pools)
-		self.uniqueness = uniqueness / len(self.dict_cover)
+			self.uniqueness = float('inf')
+		else:
+			uniqueness = 0.0
+			for c in self.covered:
+				uniqueness += self._update_uniqueness_helper(c, pools)
+			self.uniqueness = uniqueness / len(self.covered)
 
 	def _update_uniqueness_helper(self, c, pools):
 		totalcovered = 0.0
 		for p in pools:
-			if c in p.dict_cover:
-				totalcovered += p.dict_cover[c]
-		return self.dict_cover[c] / totalcovered
+			if c in p.covered:
+				totalcovered += p.covered[c]
+		return self.covered[c] / totalcovered

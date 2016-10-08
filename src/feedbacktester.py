@@ -6,21 +6,18 @@ import sys
 import time
 from collections import namedtuple
 from Pools import *
-from PoolsWithTwoLists import *
 from Variables import *
 
 def parse_args():
 	parser = argparse.ArgumentParser()
-	parser.add_argument('-d', '--delete', action = 'store_true',
-                            help = 'Delete corresponding sequences from all_seqs when delete pool.')
+	parser.add_argument('-d', '--directed', action = 'store_true',
+                            help = 'Feedback directed random test generation instead of feedback controlled random test generation.')
 	parser.add_argument('-i', '--inp', type = int, default = 10,
                             help = 'Initial number of pools (10 default).')
 	parser.add_argument('-m', '--mnp', type = int, default = 100,
                             help = 'Maximum number of pools (100 default).')
 	parser.add_argument('-n', '--nseconds', type = int, default = 1,
                             help = 'Each n seconds new pool is added (default each 1 second).')
-	parser.add_argument('-p', '--pools_with_two_lists', action = 'store_true',
-                            help = 'Using PoolsWithTwoLists class instead of Pools class.')
 	parser.add_argument('-q', '--quickTests', action = 'store_true',
                             help = 'Produce quick tests for coverage.')
 	parser.add_argument('-r', '--running', action = 'store_true',
@@ -29,14 +26,8 @@ def parse_args():
                             help = 'Random seed (default = None).')
 	parser.add_argument('-t', '--timeout', type = int, default = 3600,
                             help = 'Timeout in seconds (3600 default).')
-	parser.add_argument('-w', '--which', action = 'store_true',
-                            help = 'Using statement coverages to select and delete pool instead of branch coverages.')
-	parser.add_argument('-N', '--notcount', action = 'store_true',
-                            help = 'Not count number of coverages to delete pool. Instead of it, 1 if pool covers coverage.')
         parser.add_argument('-I', '--internal', action = 'store_true',
                             help = 'Produce internal coverage report at the end.')
-	parser.add_argument('-S', '--single', action = 'store_true',
-                            help = 'Using only single pool instead of multi pools.')
 	parsed_args = parser.parse_args(sys.argv[1:])
 	return (parsed_args, parser)
 
@@ -58,33 +49,38 @@ def main():
 	# parse command line arguments
 	parsed_args, parser = parse_args()
 	config = make_config(parsed_args, parser)
-	print('Feedback-directed/controlled random testing using config={}'.format(config))
+	print('Feedback directed/controlled random testing using config={}'.format(config))
 
 	# init
-	P = PoolsWithTwoLists() if config.pools_with_two_lists else Pools()
+	P = Pools()
 	R = random.Random(config.seed)		
 	V = Variables()	
 	start = time.time()
 
-	# feedback controlled random test generation
+	### feedback controlled random test generation
 	# add n pools
-	n = 1 if config.single else config.inp
+	n = 1 if config.directed else config.inp
 	for i in xrange(n):
 		P.create_pool()
 	last_added = time.time()
 
 	while time.time() - start < config.timeout:
 		# add a new pool for each n seconds
-		if not config.single and time.time() - last_added > config.nseconds:
+		if not config.directed and time.time() - last_added > config.nseconds:
 			P.create_pool()
 			last_added = time.time()
 
-		# select a pool and run feedback directed random test generation
-		if not P.select_pool(config).feedback(config, V, R, start):
+		# select a pool
+		pool = P.select_pool(config)
+
+		### feedback directed random test generation
+		if pool.feedback(config, V, R, start):
+			pool.update_coverage(config, V)
+		else:
 			break
 
 		# delete pools when |pools| > mnp (maximum number of pools)
-		if not config.single and P.length() > config.mnp:
+		if not config.directed and P.length() > config.mnp:
 			P.delete_pools(config.mnp / 2, config, V)
 
 	print time.time() - start, "TOTAL RUNTIME"

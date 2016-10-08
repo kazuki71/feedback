@@ -12,22 +12,22 @@ class Pools:
 	def length(self):
 		return len(self.pools)
 
-	def get_all_pools(self):
-		return self.pools
-
 	def _update_pools(self, newpools):
 		self.pools = newpools
 
 	def create_pool(self):
 		self.pid += 1
-		#print "pool", self.pid, "is added"
 		self.pools.append(Pool(self.pid))
 
 	def select_pool(self, config):
 		"""
 		select pool which has maxmum coverage score
 		"""
-		return self._select_pool_helper(config)
+		if config.directed:
+			self.pools[0].count += 1
+			return self.pools[0]
+		else:
+			return self._select_pool_helper(config)
 
 	def _select_pool_helper(self, config):
 		maxscore = -1.0
@@ -46,24 +46,12 @@ class Pools:
 		"""
 		delete and select num pools which are more uniqueness than others
 		"""
-		if config.delete:
-			V.sequences.clear()
-		##print "*****************************************************"
-		##print "*****************************************************"
-		##for key, value in sorted(V.pool_frequency.iteritems(), key = lambda (k, v): (k, v)):
-		##	print "pool", key, "is selected", value, "times"
-		V.pool_frequency.clear()
+		for pool in self.pools:
+			pool.update_uniqueness(self.pools, config)
+		sorted_pools = sorted(self.pools, key = lambda x: x.uniqueness, reverse = True)
 		newpools = []
-		all_pools = self.get_all_pools()
-		for pool in all_pools:
-			pool.update_uniqueness(all_pools, config)
-		sortedpools = sorted(all_pools, key = lambda x: x.uniqueness, reverse = True)
-		for pool in sortedpools:
+		for pool in sorted_pools:
 			newpools.append(pool)
-			if config.delete:
-				V.sequences = V.sequences.union(pool.set_nseqs).union(pool.set_eseqs)
 			if len(newpools) == num:
 				self._update_pools(newpools)
 				break
-		##for p in sorted(newpools, key = lambda x: x.pid):
-		##	print "pool", p.pid, "is survived"
