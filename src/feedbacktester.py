@@ -39,9 +39,6 @@ def make_config(pargs, parser):
 	nt_config = Config(*arg_list)
 	return nt_config
 
-def internal():
-	print "NEED TO IMPLEMENT"
-
 def quick_tests():
 	print "NEED TO IMPLEMENT"
 
@@ -74,14 +71,15 @@ def main():
 		pool = P.select_pool(config)
 
 		### feedback directed random test generation
-		if pool.feedback(config, V, R, start):
-			pool.update_coverage(config, V)
-		else:
+		if not pool.feedback(config, V, R, start):
 			break
 
 		# delete pools when |pools| > mnp (maximum number of pools)
 		if not config.directed and P.length() > config.mnp:
 			P.delete_pools(config.mnp / 2, config, V)
+
+	if config.internal:
+		P.internalReport()
 
 	print time.time() - start, "TOTAL RUNTIME"
 	print len(V.sequences), "SEQUENCES (NON ERROR + ERROR)"

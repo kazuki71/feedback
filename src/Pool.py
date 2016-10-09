@@ -1,4 +1,5 @@
 import sut as SUT
+import sys
 import time
 
 class Pool:
@@ -42,8 +43,11 @@ class Pool:
 			ok = self.sut.safely(a)
 			propok = self.sut.check()
 			acTable[self.sut.actionClass(a)] += 1
+			self.time += (time.time() - elapsed)
+			e = time.time() - start
+			self.update_coverage(a, e, config, V)
+			elapsed = time.time()
 			if (not ok) or (not propok):
-				self.time += (time.time() - elapsed)
 				print "FIND BUG in ", time.time() - start, "SECONDS by pool", self.pid
 				V.num_eseqs += 1
 				V.sequences.add(tuple_seq)
@@ -53,7 +57,6 @@ class Pool:
 			if time.time() - start > config.timeout:
 				return False
 		if max(acTable.values()) <= 10:
-			self.time += (time.time() - elapsed)
 			V.num_nseqs += 1
 			self.nseqs.append(seq)
 		V.sequences.add(tuple_seq)
@@ -74,7 +77,20 @@ class Pool:
 		else:
 			return False
 
-	def update_coverage(self, config, V):
+	def update_coverage(self, a, e, config, V):
+		if config.running:
+			if self.sut.newBranches() != set([]) and not self.sut.newBranches().issubset(V.branches):
+				print "ACTION:", self.sut.prettyName(a[0])
+				newBranches = self.sut.newBranches().difference(V.branches)
+				for b in newBranches:
+					print e, len(V.branches), "New branch", b
+					sys.stdout.flush()
+			if self.sut.newStatements() != set([]) and not self.sut.newStatements().issubset(V.statements):
+				print "ACTION:", self.sut.prettyName(a[0])
+				newStatements = self.sut.newStatements().difference(V.statements)
+				for s in newStatements:
+					print e, len(V.statements), "New branch", s
+					sys.stdout.flush()
 		if self.sut.currBranches() != set([]):
 			for b in self.sut.currBranches():
 				self.covered[b] = self.covered[b] + 1 if b in self.covered else 1
@@ -84,7 +100,7 @@ class Pool:
 			for s in self.sut.currStatements():
 				if not s in V.statements:
 					V.statements.add(s)
-
+		
 	def update_score(self, config):
 		"""
 		if pool is not investigated enough, set score as infinite
