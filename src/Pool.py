@@ -13,10 +13,11 @@ class Pool:
 		self.nseqs = [[]]		# list of non-error sequences
 		self.eseqs = []			# list of error sequences
 		self.covered = dict()		# dictionary, key: coverage by this pool, value: frequency of coverage by this pool
-		self.time = 0.0			# time of using this pool
+		self.time = 0.0			# how many seconds this pool is used in feedback()
 		self.count = 0			# how many times this pool is selected in select_pool()
 		self.score = 0.0		# score of this pool
 		self.uniqueness = 0.0		# uniqueness of this pool
+		self.survived = 0		# how many times this pool is survived from delete_pools()
 
 	def feedback(self, config, V, R, start):
 		"""
@@ -27,7 +28,10 @@ class Pool:
 		acTable = dict.fromkeys(self.sut.actionClasses(), 0)
 		if time.time() - start > config.timeout:
 			return False
-		n = R.randint(2, 100) if R.randint(0, 9) == 0 else 1
+		if config.directed:
+			n = R.randint(2, 100) if R.randint(0, 9) == 0 else 1
+		else:
+			n = R.randint(1, 100)
 		num_skips = 0
 		elapsed = time.time()
 		for i in xrange(n):
@@ -48,7 +52,7 @@ class Pool:
 			self.update_coverage(a, e, config, V)
 			elapsed = time.time()
 			if (not ok) or (not propok):
-				print "FIND BUG in ", time.time() - start, "SECONDS by pool", self.pid
+				print "FIND BUG in", time.time() - start, "SECONDS", "pid", self.pid, "survived", self.survived
 				V.num_eseqs += 1
 				V.sequences.add(tuple_seq)
 				self.eseqs.append(seq)
@@ -56,9 +60,14 @@ class Pool:
 				return True
 			if time.time() - start > config.timeout:
 				return False
-		if max(acTable.values()) <= 10:
-			V.num_nseqs += 1
-			self.nseqs.append(seq)
+		if config.directed:
+			if max(acTable.values()) <= len(self.sut.actionClasses()) * 1.8:
+				V.num_nseqs += 1
+				self.nseqs.append(seq)
+		else:
+			if max(acTable.values()) <= len(self.sut.actionClasses()) * 5.0:
+				V.num_nseqs += 1
+				self.nseqs.append(seq)
 		V.sequences.add(tuple_seq)
 		return True
 	

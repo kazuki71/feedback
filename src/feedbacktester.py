@@ -85,7 +85,6 @@ def main():
 	print len(V.sequences), "SEQUENCES (NON ERROR + ERROR)"
 	print V.num_nseqs, "NON ERROR SEQUENCES"
 	print V.num_eseqs, "ERROR SEQUENCES"
-	print V.num_redundancies, "REDUNDANCIES (CREATED SEQUENCE WHICH HAS BEEN CREATED BEFORE)"
 	print len(V.branches), "BRANCHES COVERED"
 	print len(V.statements), "STATEMENTS COVERED"
 

@@ -101,6 +101,7 @@ class Pools:
 		sorted_pools = sorted(self.pools, key = lambda x: x.uniqueness, reverse = True)
 		newpools = []
 		for pool in sorted_pools:
+			pool.survived += 1
 			newpools.append(pool)
 			if len(newpools) == num:
 				self._update_pools(newpools)
