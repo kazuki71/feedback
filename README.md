@@ -26,17 +26,17 @@ There are avl.py and avl.tstl in example/
 
 Then, type the following commands to run feedbacktester at the same directory with avl.py, sut.py, and files in /src.
 
-For running Feedback-directed Random Test Generation:
+Feedback-directed Random Test Generation with seed = 1, timeout = 600, quickTests, internalReport:
 ```
-python feedbacktester.py -S
+python2.7 feedbacktester.py -s 1 -t 600 -q -I -d
 ```
 
-For running Feedback-controlled Random Test Generation:
+Feedback-controlled Random Test Generation with seed = 1, timeout = 600, quickTests, internalReport:
 ```
-python feedbacktester.py
+python2.7 feedbacktester.py -s 1 -t 600 -q -I
 ```
 
 For more information about command line arguments, please type:
 ```
-python feedbacktester.py --help
+python2.7 feedbacktester.py --help
 ```
