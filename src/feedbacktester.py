@@ -85,8 +85,8 @@ def main():
 	print len(V.sequences), "SEQUENCES (NON ERROR + ERROR)"
 	print V.num_nseqs, "NON ERROR SEQUENCES"
 	print V.num_eseqs, "ERROR SEQUENCES"
-	print len(V.branches), "BRANCHES COVERED"
-	print len(V.statements), "STATEMENTS COVERED"
+	print len(V.branches), "BRANCHES COVERED (WITHOUT sut.py)"
+	print len(V.statements), "STATEMENTS COVERED (WITHOUT sut.py)"
 
 if __name__ == '__main__':
 	main()
