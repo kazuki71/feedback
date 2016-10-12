@@ -33,6 +33,9 @@ class Pool:
 		else:
 			n = R.randint(1, 100)
 		num_skips = 0
+		doQuickTests = False
+		snew = set()
+		bnew = set()
 		elapsed = time.time()
 		for i in xrange(n):
 			a = self.sut.randomEnabled(R)
@@ -48,11 +51,14 @@ class Pool:
 			propok = self.sut.check()
 			acTable[self.sut.actionClass(a)] += 1
 			self.time += (time.time() - elapsed)
-			e = time.time() - start
-			self.update_coverage(a, e, config, V)
+			if config.quickTests and ((self.sut.newCurrBranches() != set([]) and not self.sut.newCurrBranches().issubset(V.branches)) or (self.sut.newCurrStatements() != set([]) and not self.sut.newCurrStatements().issubset(V.statements))):
+				snew.update(self.sut.newCurrStatements().difference(V.statements))
+				bnew.update(self.sut.newCurrBranches().difference(V.branches))
+				doQuickTests = True
+			self.update_coverage(a, time.time() - start, config, V)
 			elapsed = time.time()
 			if (not ok) or (not propok):
-				print "FIND BUG in", time.time() - start, "SECONDS", "pid", self.pid, "survived", self.survived
+				print "FIND BUG IN", time.time() - start, "SECONDS USING POOL", self.pid
 				V.num_eseqs += 1
 				V.sequences.add(tuple_seq)
 				self.eseqs.append(seq)
@@ -69,12 +75,75 @@ class Pool:
 				V.num_nseqs += 1
 				self.nseqs.append(seq)
 		V.sequences.add(tuple_seq)
+		if config.quickTests and doQuickTests:
+			self.quick_tests(snew, bnew, V, start)
 		return True
 	
 	def handle_failure(self, V, start):
 		filename = 'failure' + `V.fid` + '.test'
 		self.sut.saveTest(self.sut.test(), filename)
 		V.fid = V.fid + 1
+
+	def quick_tests(self, snew, bnew, V, start):
+		test = list(self.sut.test())
+		sys.stdout.flush()
+		print "Handling new coverage for quick testing"
+		for s in snew:
+			print "NEW STATEMENT", s
+		for b in bnew:
+			print "NEW BRANCH", b
+		trep = self.sut.replay(test, catchUncaught = True, checkProp = True)
+		sremove = []
+		scov = self.sut.currStatements()
+		for s in snew:
+			if s not in scov:
+				print "REMOVING", s
+				sremove.append(s)
+		for s in sremove:
+			snew.remove(s)
+		bremove = []
+		bcov = self.sut.currBranches()
+		for b in bnew:
+			if b not in bcov:
+				print "REMOVING", b
+				bremove.append(b)
+		for b in bremove:
+			bnew.remove(b)
+		beforeReduceS = set(self.sut.allStatements())
+		beforeReduceB = set(self.sut.allBranches())
+		print "Original test has", len(test), "steps"
+		failProp = self.sut.coversAll(snew, bnew, catchUncaught = True, checkProp = True)
+		print "REDUCING..."
+		startReduce = time.time()
+		oritinal = test
+		test = self.sut.reduce(test, failProp, True, False)
+		print "Reduced test has", len(test), "steps"
+		print "REDUCED IN", time.time() - startReduce, "SECONDS"
+		self.sut.prettyPrintTest(test)
+		sys.stdout.flush()
+		for s in self.sut.allStatements():
+			if s not in beforeReduceS:
+				print "NEW STATEMENT FROM REDUCTION", s
+		for b in self.sut.allBranches():
+			if b not in beforeReduceB:
+				print "NEW BRANCH FROM REDUCTION", b
+		outname = 'quick' + `V.qid` + '.test'
+		outf = open(outname, 'w')
+		V.qid += 1
+		print
+		print "FINAL VERSION OF TEST, WITH LOGGED REPLAY:"
+		self.sut.verbose(True)
+		i = 0
+		self.sut.restart()
+		for s in test:
+			steps = "# step " + str(i)
+			print self.sut.prettyName(s[0]).ljust(80 - len(steps), ' '), steps
+			self.sut.safely(s)
+			i += 1
+			outf.write(self.sut.serializable(s) + "\n")
+		self.sut.verbose(False)
+		sys.stdout.flush()
+		outf.close()
 
 	def redundant(self, tuple_seq, V):
 		"""
@@ -86,19 +155,19 @@ class Pool:
 		else:
 			return False
 
-	def update_coverage(self, a, e, config, V):
+	def update_coverage(self, a, t, config, V):
 		if config.running:
 			if self.sut.newBranches() != set([]) and not self.sut.newBranches().issubset(V.branches):
 				print "ACTION:", self.sut.prettyName(a[0])
 				newBranches = self.sut.newBranches().difference(V.branches)
 				for b in newBranches:
-					print e, len(V.branches), "New branch", b
+					print t, len(V.branches), "New branch", b
 					sys.stdout.flush()
 			if self.sut.newStatements() != set([]) and not self.sut.newStatements().issubset(V.statements):
 				print "ACTION:", self.sut.prettyName(a[0])
 				newStatements = self.sut.newStatements().difference(V.statements)
 				for s in newStatements:
-					print e, len(V.statements), "New branch", s
+					print t, len(V.statements), "New branch", s
 					sys.stdout.flush()
 		if self.sut.currBranches() != set([]):
 			for b in self.sut.currBranches():
