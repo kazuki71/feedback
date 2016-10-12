@@ -63,6 +63,8 @@ class Pool:
 				V.sequences.add(tuple_seq)
 				self.eseqs.append(seq)
 				self.handle_failure(V, start)
+				if config.quickTests and doQuickTests:
+					self.quick_tests(snew, bnew, V, start)
 				return True
 			if time.time() - start > config.timeout:
 				return False
