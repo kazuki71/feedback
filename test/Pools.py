@@ -69,7 +69,7 @@ class Pools:
 		self.pid += 1
 		self.pools.append(Pool(self.pid))
 
-	def select_pool(self, config):
+	def select_pool(self, config, V):
 		"""
 		select pool which has maxmum coverage score
 		"""
@@ -77,9 +77,16 @@ class Pools:
 			self.pools[0].count += 1
 			return self.pools[0]
 		else:
-			return self._select_pool_helper(config)
+			return self._select_pool_helper(config, V)
 
-	def _select_pool_helper(self, config):
+	def _select_pool_helper(self, config, V):
+		V.ave_score = 0.0
+		for pool in self.pools:
+			pool.update_score(config)
+			if pool.score == float('inf'):
+				pool.count += 1
+			V.ave_score += pool.score
+
 		maxscore = -1.0
 		for pool in self.pools:
 			pool.update_score(config)
@@ -96,16 +103,16 @@ class Pools:
 		"""
 		delete and select num pools which are more uniqueness than others
 		"""
-		#sorted_by_count = sorted(self.pools, key = lambda x: x.count, reverse = True)
-		#for pool in sorted_by_count:
-		#	print "pid", pool.pid, "count", pool.count, "score", pool.score, "uniqueness", pool.uniqueness
-		#	pool.count = 0
 		for pool in self.pools:
 			pool.update_uniqueness(self.pools, config)
-		sorted_by_uniqueness = sorted(self.pools, key = lambda x: x.uniqueness, reverse = True)
+		sorted_pools = sorted(self.pools, key = lambda x: x.uniqueness, reverse = True)
 		newpools = []
-		for pool in sorted_by_uniqueness:
+		V.ave_uniqueness = 0.0
+		for pool in sorted_pools:
+			pool.survived += 1
 			newpools.append(pool)
+			V.ave_uniqueness += pool.uniqueness
 			if len(newpools) == num:
 				self._update_pools(newpools)
+				V.ave_uniqueness /= num
 				break
