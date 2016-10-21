@@ -96,6 +96,9 @@ class Pools:
 		"""
 		delete and select num pools which are more uniqueness than others
 		"""
+		#print "*******************************************************************************************************"
+		#print "*******************************************************************************************************"
+		#print "*******************************************************************************************************"
 		#sorted_by_count = sorted(self.pools, key = lambda x: x.count, reverse = True)
 		#for pool in sorted_by_count:
 		#	print "pid", pool.pid, "count", pool.count, "score", pool.score, "uniqueness", pool.uniqueness
