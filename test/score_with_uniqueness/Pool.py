@@ -17,7 +17,6 @@ class Pool:
 		self.count = 0			# how many times this pool is selected in select_pool()
 		self.score = 0.0		# score of this pool
 		self.uniqueness = 0.0		# uniqueness of this pool
-		self.survived = 0		# how many times this pool is survived from delete_pools()
 
 	def feedback(self, config, V, R, start):
 		"""

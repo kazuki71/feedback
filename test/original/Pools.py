@@ -96,14 +96,14 @@ class Pools:
 		"""
 		delete and select num pools which are more uniqueness than others
 		"""
-		#print "*****************************************************************************************************"
-		#print "*****************************************************************************************************"
-		#sorted_by_count = sorted(self.pools, key = lambda x: x.count, reverse = True)
-		#for pool in sorted_by_count:
-		#	print "pid", pool.pid, "count", pool.count, "score", pool.score, "uniqueness", pool.uniqueness
-		#	pool.count = 0
 		for pool in self.pools:
 			pool.update_uniqueness(self.pools, config)
+		print "*****************************************************************************************************"
+		print "*****************************************************************************************************"
+		sorted_by_count = sorted(self.pools, key = lambda x: x.count, reverse = True)
+		for pool in sorted_by_count:
+			print "pid", pool.pid, "count", pool.count, "score", pool.score, "uniqueness", pool.uniqueness
+			pool.count = 0
 		sorted_by_uniqueness = sorted(self.pools, key = lambda x: x.uniqueness, reverse = True)
 		newpools = []
 		for pool in sorted_by_uniqueness:

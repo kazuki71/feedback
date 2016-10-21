@@ -12,5 +12,5 @@ class Variables:
 		self.sequences = set()		# a set of sequences (non-error + error)
 		self.branches = set()		# a set of branches coverage
 		self.statements = set()		# a set of statements coverage
-		self.ave_score			# average of score
-		self.ave_uniqueness		# average of uniqueness
+		self.ave_score = 0.0		# average of score
+		self.ave_uniqueness = 0.0	# average of uniqueness

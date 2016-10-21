@@ -85,16 +85,15 @@ class Pools:
 			pool.update_score(config)
 			if pool.score == float('inf'):
 				pool.count += 1
+				return pool
 			V.ave_score += pool.score
-
+		V.ave_score /= len(self.pools)
+		weight = V.ave_score / V.ave_uniqueness if V.ave_uniqueness != 0 else 0
 		maxscore = -1.0
 		for pool in self.pools:
-			pool.update_score(config)
-			if pool.score == float('inf'):
-				pool.count += 1
-				return pool
-			elif pool.score > maxscore:
-				maxscore = pool.score
+			score = pool.score + weight * pool.uniqueness if pool.uniqueness != float('inf') else pool.score
+			if score > maxscore:
+				maxscore = score
 				selected = pool
 		selected.count += 1
 		return selected
@@ -106,10 +105,15 @@ class Pools:
 		for pool in self.pools:
 			pool.update_uniqueness(self.pools, config)
 		sorted_pools = sorted(self.pools, key = lambda x: x.uniqueness, reverse = True)
+		print "*****************************************************************************************************"
+		print "*****************************************************************************************************"
+		sorted_by_count = sorted(self.pools, key = lambda x: x.count, reverse = True)
+		for pool in sorted_by_count:
+			print "pid", pool.pid, "count", pool.count, "score", pool.score, "uniqueness", pool.uniqueness
+			pool.count = 0
 		newpools = []
 		V.ave_uniqueness = 0.0
 		for pool in sorted_pools:
-			pool.survived += 1
 			newpools.append(pool)
 			V.ave_uniqueness += pool.uniqueness
 			if len(newpools) == num:
