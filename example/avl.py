@@ -34,8 +34,9 @@ class AVLTree:
     def __init__(self, *args):
         self.node = None 
         self.height = -1  
-        self.balance = 0; 
-        
+        self.balance = 0 
+        self.evilstate = 0
+
         if len(args) == 1: 
             for i in args[0]: 
                 self.insert(i)
@@ -84,6 +85,18 @@ class AVLTree:
     def insert(self, key):
         tree = self.node
         
+        if (key == 1) and (self.evilstate == 0):
+            self.evilstate = 1
+        elif (key == 2) and (self.evilstate == 1):
+            self.evilstate = 2
+        elif (key == 3) and (self.evilstate == 2):
+            self.evilstate = 3
+        elif (key == 4) and (self.evilstate == 3):
+            key = key/0
+            self.evilstate = 3            
+        else:
+            self.evilstate = 0
+
         newnode = Node(key)
         
         if tree == None:
@@ -113,7 +126,7 @@ class AVLTree:
         while self.balance < -1 or self.balance > 1: 
             if self.balance > 1:
                 if self.node.left.balance < 0:  
-                    self.node.left.rrotate() # we're in case II
+                    self.node.left.lrotate() # we're in case II
                     self.updateheights()
                     self.update_balances()
                 self.rrotate()
@@ -201,8 +214,8 @@ class AVLTree:
                         
                         # replaced. Now delete the key from right child 
                         self.node.right.delete(replacement.key)
-                    
-                self.rebalance()
+                if True or (key < 10) or ((key % 2) == 1):   
+                    self.rebalance()
                 return  
             elif key < self.node.key: 
                 self.node.left.delete(key)  
