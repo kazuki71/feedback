@@ -1,6 +1,12 @@
-# Feedback Based Random Tester (FBRT)
+# Feedback Random Tester (FRT)
 
-Feedback Based Random Tester (FBRT) is advanced random test generator in Python 2.x for The Template Scripting Testing Language (TSTL): https://github.com/agroce/tstl, which is a research project by Dr. Alex Groce. FBRT provides two advanced random test generators: Feedback-directed Random Test Generation by Carlos Pacheco, Shuvendu K. Lahiri, Michael D. Ernst, and Thomas Ball, and Feedback-controlled Random Test Generation by Kohsuke Yatoh, Kazunori Sakamoto, Fuyuki Ishikawa and Shinichi Honiden.
+Feedback Random Tester (FRT) is an dvanced random test generator in Python 2.x for The Template Scripting Testing Language (TSTL): https://github.com/agroce/tstl, which is a research project by Dr. Alex Groce. FRT provides two advanced random test generators: Feedback-directed Random Test Generation by Carlos Pacheco, Shuvendu K. Lahiri, Michael D. Ernst, and Thomas Ball, and Feedback-controlled Random Test Generation by Kohsuke Yatoh, Kazunori Sakamoto, Fuyuki Ishikawa and Shinichi Honiden.
+
+## Features:
+* Provided alternative test generator for TSTL by implementing Feedback-directed Random Test Generation and Feedback-controlled Random Test Generation
+* No input requirements for generating test cases
+* Avoided redundant test cases and generated distinct test cases using Feedback-directed Random Test Generation
+* Reduced biased test cases and produced unique test cases using Feedback-controlled Random Test generation
 
 ## How to install
 
