@@ -1,6 +1,6 @@
 # Feedback Random Tester (FRT)
 
-Feedback Random Tester (FRT) is an dvanced random test generator in Python 2.x for The Template Scripting Testing Language (TSTL): https://github.com/agroce/tstl, which is a research project by Dr. Alex Groce. FRT provides two advanced random test generators: Feedback-directed Random Test Generation by Carlos Pacheco, Shuvendu K. Lahiri, Michael D. Ernst, and Thomas Ball, and Feedback-controlled Random Test Generation by Kohsuke Yatoh, Kazunori Sakamoto, Fuyuki Ishikawa and Shinichi Honiden.
+Feedback Random Tester (FRT) is an advanced random test generator in Python 2.x for The Template Scripting Testing Language (TSTL): https://github.com/agroce/tstl, which is a research project by Dr. Alex Groce. FRT provides two advanced random test generators: Feedback-directed Random Test Generation by Carlos Pacheco, Shuvendu K. Lahiri, Michael D. Ernst, and Thomas Ball, and Feedback-controlled Random Test Generation by Kohsuke Yatoh, Kazunori Sakamoto, Fuyuki Ishikawa and Shinichi Honiden.
 
 ## Features:
 * Provided alternative test generator for TSTL by implementing Feedback-directed Random Test Generation and Feedback-controlled Random Test Generation
