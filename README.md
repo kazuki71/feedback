@@ -6,7 +6,7 @@ Feedback Random Tester (FRT) is an advanced random test generator in Python 2.x 
 * Provided alternative test generator for TSTL by implementing Feedback-directed Random Test Generation and Feedback-controlled Random Test Generation
 * No input requirements for generating test cases
 * Avoided redundant test cases and generated distinct test cases using Feedback-directed Random Test Generation
-* Reduced biased test cases and produced unique test cases using Feedback-controlled Random Test generation
+* Reduced biased test cases and produced unique test cases using Feedback-controlled Random Test Generation
 
 ## How to install
 
