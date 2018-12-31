@@ -1,6 +1,6 @@
 # Feedback Random Tester (FRT)
 
-Feedback Random Tester (FRT) is an advanced random test generator in Python 2.x for an automated software testing tool named The Template Scripting Testing Language (TSTL): https://github.com/agroce/tstl, which is a research project by Dr. Alex Groce. FRT provides two advanced random test generators: Feedback-directed Random Test Generation by Carlos Pacheco, Shuvendu K. Lahiri, Michael D. Ernst, and Thomas Ball, and Feedback-controlled Random Test Generation by Kohsuke Yatoh, Kazunori Sakamoto, Fuyuki Ishikawa and Shinichi Honiden.
+Feedback Random Tester (FRT) is an advanced random test generator in Python 2.x for an automated software testing tool named The Template Scripting Testing Language (TSTL): https://github.com/agroce/tstl, which is a research project by Dr. Alex Groce. FRT provides two advanced random test generators: Feedback-directed Random Test Generation by Carlos Pacheco, Shuvendu K. Lahiri, Michael D. Ernst, and Thomas Ball, and Feedback-controlled Random Test Generation by Kohsuke Yatoh, Kazunori Sakamoto, Fuyuki Ishikawa, and Shinichi Honiden.
 
 ## Features
 * Provided alternative test generator for TSTL by implementing Feedback-directed Random Test Generation and Feedback-controlled Random Test Generation
@@ -24,7 +24,7 @@ git clone https://github.com/kazuki71/feedback.git
 
 ## How to run
 
-For running feedbacktester, need to prepre software under test (sut) by TSTL. For example, supporse avl.py is our sut. Create tstl file to indicate what aspects of avl.py you want to test. Let this tstl file be avl.tstl. Then, type the following command to generate sut.py at the same directory with avl.py and avl.tstl:
+For running feedbacktester, need to prepare software under test (sut) by TSTL. For example, suppose avl.py is our sut. Create tstl file to indicate what aspects of avl.py you want to test. Let this tstl file be avl.tstl. Then, type the following command to generate sut.py at the same directory with avl.py and avl.tstl:
 ```
 tstl avl.tstl
 ```
